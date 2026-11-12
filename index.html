@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Momentum AR – โมเมนตัม แรง และการเปลี่ยนโมเมนตัม</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+    "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+  }
+}
+</script>
+<style>
+  :root {
+    --panel: rgba(28, 38, 64, 0.94);
+    --panel-solid: #1c2640;
+    --line: rgba(255,255,255,0.14);
+    --text: #ffffff;
+    --muted: #9fb4d8;
+    --tab-on: #3373e6;
+    --tab-off: #4d5466;
+    --momentum: #33d9ff;
+    --force: #ff3333;
+    --dp: #ffd91a;
+    --orange: #ff7326;
+    --good: #4ade80;
+    --bad: #f87171;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: #000; color: var(--text);
+    font-family: "Sarabun", "Thonburi", "Tahoma", sans-serif; overflow: hidden; }
+  #ar { position: fixed; inset: 0; }
+
+  /* หน้าเริ่มต้น */
+  #start { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px; padding: 32px 24px;
+    background: radial-gradient(circle at 50% 30%, #2a3b66, #101729 70%); text-align: center; }
+  #start h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; }
+  #start .sub { margin: 0; color: var(--muted); font-size: 18px; max-width: 26em; line-height: 1.5; }
+  .markers { display: flex; gap: 10px; margin: 6px 0; }
+  .markers span { width: 46px; height: 46px; border-radius: 10px; border: 3px solid #fff;
+    display: grid; place-items: center; font-weight: 700; font-size: 24px; }
+  #startBtn { font: inherit; font-size: 22px; font-weight: 700; color: #fff; background: var(--force);
+    border: 0; border-radius: 14px; padding: 14px 40px; cursor: pointer; }
+  #startMsg { color: var(--bad); font-size: 16px; min-height: 1.4em; max-width: 24em; }
+  #start .small { color: var(--muted); font-size: 14px; }
+
+  /* แถบสถานะด้านบน */
+  #chip { position: fixed; z-index: 20; top: calc(env(safe-area-inset-top, 0px) + 10px); left: 50%;
+    transform: translateX(-50%); background: var(--panel); border-radius: 999px;
+    padding: 8px 16px; font-size: 16px; display: none; align-items: center; gap: 8px; white-space: nowrap; }
+  #chip .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--bad); }
+  #chip.found .dot { background: var(--good); }
+
+  /* แผงควบคุมด้านล่าง */
+  #panel { position: fixed; z-index: 20; left: 50%; transform: translateX(-50%);
+    bottom: 0; width: min(100%, 620px); max-height: 52vh; display: none; flex-direction: column;
+    background: var(--panel); border-radius: 18px 18px 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px); }
+  #panel.collapsed .body { display: none; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 10px 14px 8px; border-bottom: 1px solid var(--line); }
+  .head h2 { margin: 0; font-size: 19px; font-weight: 700; color: #b3d9ff; }
+  .head button { font: inherit; font-size: 15px; color: #fff; background: var(--tab-off); border: 0;
+    border-radius: 10px; padding: 6px 12px; cursor: pointer; }
+  .body { overflow-y: auto; padding: 10px 14px 14px; -webkit-overflow-scrolling: touch; }
+  .scene { display: none; }
+  .scene.on { display: block; }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .tabs button, .btn { font: inherit; font-size: 16px; color: #fff; background: var(--tab-off);
+    border: 0; border-radius: 10px; padding: 9px 10px; cursor: pointer; flex: 1; }
+  .tabs button.on, .btn.on { background: var(--tab-on); }
+  .btn.go { background: #d93333; font-weight: 700; font-size: 18px; }
+  .btn:disabled { opacity: 0.5; }
+  .row { display: flex; gap: 8px; margin: 8px 0; }
+  label.sl { display: block; margin: 6px 0 2px; font-size: 16px; }
+  input[type=range] { width: 100%; accent-color: var(--tab-on); height: 28px; }
+  .info { font-size: 16px; line-height: 1.55; margin: 8px 0; white-space: pre-line; }
+  .msg { font-size: 16px; font-weight: 700; margin: 6px 0; }
+  .good { color: var(--good); } .bad { color: var(--bad); } .muted { color: var(--muted); }
+  .orange { color: var(--orange); }
+  canvas.graph { width: 100%; height: 170px; display: block; background: rgba(0,0,0,0.25);
+    border-radius: 10px; margin: 8px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 6px; }
+  th, td { border: 1px solid var(--line); padding: 4px 5px; text-align: center; }
+  th { color: var(--muted); font-weight: 600; }
+  tr.best td { color: var(--good); font-weight: 700; }
+  .tablewrap { overflow-x: auto; }
+
+  /* แบบทดสอบ */
+  .q { font-size: 18px; line-height: 1.5; margin: 6px 0 10px; }
+  .choice { display: block; width: 100%; text-align: left; font: inherit; font-size: 17px; color: #fff;
+    background: var(--tab-off); border: 0; border-radius: 10px; padding: 10px 12px; margin: 6px 0; cursor: pointer; }
+  .choice.right { background: #1f9d55; }
+  .choice.wrong { background: #c53030; }
+  .score { font-size: 28px; font-weight: 700; text-align: center; margin: 14px 0 6px; }
+
+  /* เช็กลิสต์ */
+  .check { display: flex; gap: 10px; align-items: center; padding: 9px 10px; margin: 6px 0;
+    border-radius: 10px; background: var(--tab-off); font-size: 16px; cursor: pointer; }
+  .check input { width: 22px; height: 22px; accent-color: var(--good); }
+  .check.done { background: #1f7a45; }
+  .warn { color: var(--bad); font-weight: 600; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="ar"></div>
+
+<div id="start">
+  <h1>Momentum AR</h1>
+  <p class="sub">โมเมนตัม แรง และการเปลี่ยนโมเมนตัม<br>ส่องกล้องไปที่ภาพ marker ในใบความรู้และใบกิจกรรม</p>
+  <div class="markers"><span>A</span><span>B</span><span>C</span><span>D</span></div>
+  <button id="startBtn">เปิดกล้อง</button>
+  <div id="startMsg"></div>
+  <div class="small">เมื่อเบราว์เซอร์ถาม ให้กด “อนุญาต” ใช้กล้อง</div>
+</div>
+
+<div id="chip"><span class="dot"></span><span id="chipText">ส่องกล้องไปที่ภาพ A, B, C หรือ D</span></div>
+
+<div id="panel">
+  <div class="head"><h2 id="panelTitle"></h2><button id="collapseBtn">ย่อ</button></div>
+  <div class="body">
+
+    <!-- ฉาก A -->
+    <div class="scene" id="sceneA">
+      <div class="tabs">
+        <button data-mode="mom" class="on">โมเมนตัม</button>
+        <button data-mode="force">ออกแรง</button>
+        <button data-mode="ball">ลูกบอลชนผนัง</button>
+      </div>
+      <div id="aMom">
+        <label class="sl" id="tMLab"></label><input type="range" id="tM" min="1000" max="12000" step="100" value="8000">
+        <label class="sl" id="tVLab"></label><input type="range" id="tV" min="0" max="30" step="1" value="10">
+        <label class="sl" id="sMLab"></label><input type="range" id="sM" min="500" max="2500" step="50" value="1200">
+        <label class="sl" id="sVLab"></label><input type="range" id="sV" min="0" max="80" step="1" value="10">
+        <div class="info" id="momSummary"></div>
+      </div>
+      <div id="aForce" style="display:none">
+        <label class="sl" id="fMLab"></label><input type="range" id="fM" min="500" max="2500" step="50" value="1200">
+        <div class="row">
+          <button class="btn on" id="mul1">แรง 1 เท่า (2,000 N)</button>
+          <button class="btn" id="mul2">แรง 2 เท่า (4,000 N)</button>
+        </div>
+        <div class="row">
+          <button class="btn go" id="pushBtn">ออกแรง!</button>
+          <button class="btn" id="clearForce" style="flex:0.5">ล้างผล</button>
+        </div>
+        <div class="info" id="forceInfo"></div>
+        <canvas class="graph" id="forceGraph"></canvas>
+        <div class="muted" style="font-size:14px">ผลการทดลอง (3 รอบล่าสุด) ลองเปลี่ยนมวลรถแล้วออกแรงเท่าเดิม</div>
+        <div class="tablewrap"><table id="forceTable"></table></div>
+        <div class="msg orange" id="forceMsg2"></div>
+        <div class="msg good" id="forceMsg"></div>
+      </div>
+      <div id="aBall" style="display:none">
+        <div class="row"><button class="btn go" id="ballBtn">ปล่อยลูกบอล</button></div>
+        <div class="info" id="ballInfo"></div>
+      </div>
+    </div>
+
+    <!-- ฉาก B -->
+    <div class="scene" id="sceneB">
+      <div class="muted" id="qHead"></div>
+      <div id="qBody"></div>
+    </div>
+
+    <!-- ฉาก C -->
+    <div class="scene" id="sceneC">
+      <label class="sl">ขนาดลูกโป่ง (แรงจากลม)</label>
+      <div class="row" id="sizeRow">
+        <button class="btn" data-size="0">เล็ก</button>
+        <button class="btn on" data-size="1">กลาง</button>
+        <button class="btn" data-size="2">ใหญ่</button>
+      </div>
+      <label class="sl" id="cMLab"></label><input type="range" id="cM" min="30" max="120" step="1" value="60">
+      <div class="row">
+        <button class="btn on" id="wSmooth">ล้อลื่น (แรงเสียดทานน้อย)</button>
+        <button class="btn" id="wRough">ล้อฝืด (แรงเสียดทานมาก)</button>
+      </div>
+      <div class="info muted" id="cSetting"></div>
+      <div class="row">
+        <button class="btn go" id="launchBtn">ปล่อยรถ!</button>
+        <button class="btn" id="clearC" style="flex:0.5">ล้างผล</button>
+      </div>
+      <div class="info" id="cLive">ปรับตัวแปร แล้วกด “ปล่อยรถ!”</div>
+      <canvas class="graph" id="cGraph"></canvas>
+      <div class="muted" style="font-size:14px">ตารางผลการทดลอง ลองอย่างน้อย 3 ชุดตัวแปร แล้วจดค่าลงใบกิจกรรม</div>
+      <div class="tablewrap"><table id="cTable"></table></div>
+    </div>
+
+    <!-- ฉาก D -->
+    <div class="scene" id="sceneD">
+      <div class="msg" id="dTitle"></div>
+      <div class="info" id="dText"></div>
+      <div class="info warn" id="dWarn"></div>
+      <div id="dChecks"></div>
+      <div class="msg" id="dStatus"></div>
+      <div class="row">
+        <button class="btn" id="dBack">ย้อนกลับ</button>
+        <button class="btn on" id="dNext">ถัดไป</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { MindARThree } from 'mindar-image-three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+// ===== ตั้งค่าที่แก้ได้ =====
+const MODEL_YAW = Math.PI / 2;   // หมุนโมเดลรถ Kenney ให้หันไปทางขวา (ถ้ารถหันผิดทาง ลองเปลี่ยนเป็น -Math.PI / 2)
+const SCENE_NAMES = ['ฉาก A: โมเมนตัม', 'ฉาก B: แบบทดสอบ', 'ฉาก C: ห้องทดลองรถลูกโป่ง', 'ฉาก D: คู่มือประกอบรถ'];
+
+const $ = (id) => document.getElementById(id);
+const N = (x) => Math.round(x).toLocaleString('en-US');
+const F1 = (x) => x.toFixed(1), F2 = (x) => x.toFixed(2), F3 = (x) => x.toFixed(3);
+
+// ---------- ตัวช่วยสร้างวัตถุ 3 มิติ ----------
+function mat(color, opts = {}) { return new THREE.MeshStandardMaterial({ color, roughness: 0.6, ...opts }); }
+
+function makeArrow(color) {
+  const g = new THREE.Group();
+  const m = new THREE.MeshBasicMaterial({ color, depthTest: false, transparent: true });
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 12), m);
+  const head = new THREE.Mesh(new THREE.ConeGeometry(1, 1, 16), m);
+  shaft.renderOrder = head.renderOrder = 5;
+  g.add(shaft, head);
+  g.visible = false;
+  g.setTo = (x, y, z, len, thick = 0.012) => {
+    const L = Math.abs(len);
+    if (L < 0.01) { g.visible = false; return; }
+    g.visible = true;
+    g.position.set(x, y, z);
+    g.rotation.set(0, 0, len >= 0 ? -Math.PI / 2 : Math.PI / 2);
+    const hl = Math.min(0.06, L * 0.5), sl = L - hl;
+    shaft.scale.set(thick, sl, thick); shaft.position.y = sl / 2;
+    head.scale.set(thick * 2.4, hl, thick * 2.4); head.position.y = sl + hl / 2;
+  };
+  g.setOpacity = (o) => { m.opacity = o; };
+  return g;
+}
+
+function makeLabel(color = '#ffffff', width = 0.55) {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 128;
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+  s.scale.set(width, width / 8, 1);
+  s.renderOrder = 10;
+  s.visible = false;
+  let last = null;
+  s.setText = (t, col) => {
+    const key = t + '|' + (col || color);
+    if (key === last) return;
+    last = key;
+    const g = c.getContext('2d');
+    g.clearRect(0, 0, 1024, 128);
+    if (!t) { s.visible = false; return; }
+    s.visible = true;
+    g.font = '600 64px Sarabun, sans-serif';
+    const tw = Math.min(1010, g.measureText(t).width + 56);
+    g.fillStyle = 'rgba(15,22,40,0.85)';
+    g.beginPath(); g.roundRect((1024 - tw) / 2, 12, tw, 104, 30); g.fill();
+    g.fillStyle = col || color; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(t, 512, 66);
+    tex.needsUpdate = true;
+  };
+  return s;
+}
+
+const loader = new GLTFLoader();
+function loadCar(url, length, fallbackColor) {
+  const holder = new THREE.Group();
+  holder.userData.wheels = [];
+  const fallback = () => {
+    const body = new THREE.Mesh(new THREE.BoxGeometry(length, length * 0.35, length * 0.45), mat(fallbackColor));
+    body.position.y = length * 0.25;
+    holder.add(body);
+  };
+  loader.load(url, (gltf) => {
+    const m = gltf.scene;
+    m.rotation.y = MODEL_YAW;
+    const size = new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3());
+    m.scale.setScalar(length / Math.max(size.x, size.z));
+    const b = new THREE.Box3().setFromObject(m);
+    const c = b.getCenter(new THREE.Vector3());
+    m.position.set(-c.x, -b.min.y, -c.z);
+    m.traverse((o) => {
+      if (/wheel/i.test(o.name) && !(o.parent && /wheel/i.test(o.parent.name))) holder.userData.wheels.push(o);
+    });
+    holder.add(m);
+  }, undefined, fallback);
+  return holder;
+}
+function spinWheels(car, amount) { for (const w of car.userData.wheels) w.rotation.x += amount; }
+
+// ---------- กราฟโมเมนตัม–เวลา ----------
+class Graph {
+  constructor(canvas, { tMax, pMax, pStep, fmt, maxSeries = 4 }) {
+    Object.assign(this, { c: canvas, tMax, pMax, pStep, fmt, maxSeries });
+    this.series = [];
+  }
+  add(color, label) { const s = { color, label, pts: [], tag: null }; this.series.push(s); if (this.series.length > this.maxSeries) this.series.shift(); return s; }
+  clear() { this.series = []; this.draw(); }
+  draw() {
+    const c = this.c, w = c.clientWidth, h = c.clientHeight;
+    if (!w) return;
+    const dpr = window.devicePixelRatio || 1;
+    if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+    const g = c.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    const L = 58, R = 12, T = 12, B = 26;
+    const X = (t) => L + (t / this.tMax) * (w - L - R);
+    const Y = (p) => h - B - (p / this.pMax) * (h - T - B);
+    g.font = '12px Sarabun, sans-serif';
+    g.strokeStyle = 'rgba(255,255,255,0.12)'; g.fillStyle = '#9fb4d8'; g.lineWidth = 1;
+    for (let p = 0; p <= this.pMax + 1e-9; p += this.pStep) {
+      g.beginPath(); g.moveTo(L, Y(p)); g.lineTo(w - R, Y(p)); g.stroke();
+      g.textAlign = 'right'; g.textBaseline = 'middle'; g.fillText(this.fmt(p), L - 6, Y(p));
+    }
+    for (let t = 0; t <= this.tMax; t++) {
+      g.textAlign = 'center'; g.textBaseline = 'top'; g.fillText(String(t), X(t), h - B + 6);
+    }
+    g.textAlign = 'left'; g.textBaseline = 'top'; g.fillText('p (kg·m/s)', L + 4, T);
+    g.textAlign = 'right'; g.textBaseline = 'bottom'; g.fillText('t (s)', w - R, h - B - 2);
+    g.strokeStyle = '#ffffff'; g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(L, T); g.lineTo(L, h - B); g.lineTo(w - R, h - B); g.stroke();
+    for (const s of this.series) {
+      if (s.pts.length < 2) continue;
+      g.strokeStyle = s.color; g.lineWidth = 3; g.lineJoin = 'round';
+      g.beginPath();
+      s.pts.forEach(([t, p], i) => (i ? g.lineTo(X(t), Y(p)) : g.moveTo(X(t), Y(p))));
+      g.stroke();
+      if (s.tag) {
+        g.fillStyle = s.color; g.font = '600 13px Sarabun, sans-serif';
+        g.textAlign = 'right'; g.textBaseline = 'bottom';
+        g.fillText(s.tag.text, Math.max(L + 120, X(s.tag.t) - 4), Y(s.tag.p) - 4);
+        g.font = '12px Sarabun, sans-serif';
+      }
+    }
+  }
+}
+
+// ---------- ฉาก A: โมเมนตัม ----------
+function buildSceneA(root) {
+  const S = { mode: 'mom', truckM: 8000, truckV: 10, sedanM: 1200, sedanV: 10, mul: 1,
+    force: { running: false, t: 0, v: 0, p: 0, s: 0, next: 0, series: null, slope: false },
+    runs: [], log: [], ball: { running: false, x: -0.55, vel: 0, bounced: false } };
+
+  const road = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.01, 0.8), mat(0x3a4150));
+  root.add(road);
+  for (const z of [0]) {
+    const line = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.012, 0.012), mat(0xffffff));
+    line.position.set(0, 0.002, z); root.add(line);
+  }
+  const truck = loadCar('./models/garbage-truck.glb', 0.42, 0x3cb371);
+  const sedan = loadCar('./models/sedan.glb', 0.32, 0x3c78d8);
+  root.add(truck, sedan);
+  const truckArrow = makeArrow(0x33d9ff), sedanArrow = makeArrow(0x33d9ff);
+  const forceArrow = makeArrow(0xff3333), dpArrow = makeArrow(0xffd91a);
+  const truckLabel = makeLabel('#33d9ff'), sedanLabel = makeLabel('#33d9ff');
+  const forceLabel = makeLabel('#ff6b6b', 0.45), dpLabel = makeLabel('#ffd91a', 0.5);
+  root.add(truckArrow, sedanArrow, forceArrow, dpArrow, truckLabel, sedanLabel, forceLabel, dpLabel);
+
+  const wall = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.4, 0.6), mat(0x8a7a6a));
+  wall.position.set(0.6, 0.2, 0);
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.06, 24, 16), mat(0xff8c1a));
+  const ballNow = makeArrow(0x33d9ff), ballBefore = makeArrow(0x33d9ff), ballDp = makeArrow(0xffd91a);
+  ballBefore.setOpacity(0.35);
+  const ballLabel = makeLabel('#33d9ff', 0.45), ballDpLabel = makeLabel('#ffd91a', 0.55);
+  root.add(wall, ball, ballNow, ballBefore, ballDp, ballLabel, ballDpLabel);
+
+  truck.position.set(-0.6, 0, -0.18);
+  sedan.position.set(-0.3, 0, 0.18);
+
+  const graph = new Graph($('forceGraph'), { tMax: 4, pMax: 12000, pStep: 3000, fmt: N });
+
+  // --- UI ---
+  const tabs = document.querySelectorAll('#sceneA .tabs button');
+  tabs.forEach((b) => b.onclick = () => setMode(b.dataset.mode));
+  const bindSlider = (id, key, after) => { $(id).oninput = (e) => { S[key] = +e.target.value; after(); }; };
+  bindSlider('tM', 'truckM', refreshMom); bindSlider('tV', 'truckV', refreshMom);
+  bindSlider('sM', 'sedanM', refreshMom); bindSlider('sV', 'sedanV', refreshMom);
+  $('fM').oninput = (e) => { if (S.force.running) { e.target.value = S.sedanM; return; } S.sedanM = +e.target.value; $('sM').value = S.sedanM; refreshForce(); };
+  $('mul1').onclick = () => { if (!S.force.running) { S.mul = 1; refreshForce(); } };
+  $('mul2').onclick = () => { if (!S.force.running) { S.mul = 2; refreshForce(); } };
+  $('pushBtn').onclick = startPush;
+  $('clearForce').onclick = () => { if (S.force.running) return; S.runs = []; S.log = []; graph.clear(); S.force.p = 0; S.force.v = 0; S.force.t = 0; refreshForce(); };
+  $('ballBtn').onclick = () => { Object.assign(S.ball, { running: true, x: -0.55, vel: 0.5, bounced: false }); refreshBall(); };
+
+  function setMode(m) {
+    S.mode = m;
+    tabs.forEach((b) => b.classList.toggle('on', b.dataset.mode === m));
+    $('aMom').style.display = m === 'mom' ? '' : 'none';
+    $('aForce').style.display = m === 'force' ? '' : 'none';
+    $('aBall').style.display = m === 'ball' ? '' : 'none';
+    truck.visible = m === 'mom';
+    sedan.visible = m !== 'ball';
+    road.visible = m !== 'ball';
+    wall.visible = ball.visible = m === 'ball';
+    [truckArrow, sedanArrow, forceArrow, dpArrow, truckLabel, sedanLabel, forceLabel, dpLabel,
+      ballNow, ballBefore, ballDp, ballLabel, ballDpLabel].forEach((o) => (o.visible = false));
+    if (m === 'mom') { sedan.position.z = 0.18; $('sM').value = S.sedanM; refreshMom(); }
+    if (m === 'force') { sedan.position.set(-0.75, 0, 0); $('fM').value = S.sedanM; refreshForce(); requestAnimationFrame(() => graph.draw()); }
+    if (m === 'ball') { ball.position.set(-0.55, 0.06, 0); refreshBall(); }
+  }
+
+  function refreshMom() {
+    $('tMLab').textContent = `มวลรถบรรทุก  m = ${N(S.truckM)} kg`;
+    $('tVLab').textContent = `ความเร็วรถบรรทุก  v = ${N(S.truckV)} m/s  (${N(S.truckV * 3.6)} km/h)`;
+    $('sMLab').textContent = `มวลรถเก๋ง  m = ${N(S.sedanM)} kg`;
+    $('sVLab').textContent = `ความเร็วรถเก๋ง  v = ${N(S.sedanV)} m/s  (${N(S.sedanV * 3.6)} km/h)`;
+    const pT = S.truckM * S.truckV, pS = S.sedanM * S.sedanV;
+    const big = Math.max(pT, pS), small = Math.min(pT, pS);
+    let s = `p = mv     รถบรรทุก ${N(pT)}     รถเก๋ง ${N(pS)} kg·m/s\n`;
+    let html;
+    if (big < 1) html = 'รถทั้งสองคันหยุดนิ่ง โมเมนตัมเป็นศูนย์';
+    else if (Math.abs(pT - pS) <= 0.02 * big) html = '<span class="good"><b>โมเมนตัมเท่ากันแล้ว!</b> รถเก๋งต้องเร็วกว่ามาก เพราะมวลน้อยกว่า</span>';
+    else if (small < 1) html = (pT > pS ? 'รถเก๋ง' : 'รถบรรทุก') + 'หยุดนิ่ง จึงไม่มีโมเมนตัม';
+    else html = `${pT > pS ? 'รถบรรทุก' : 'รถเก๋ง'}มีโมเมนตัมมากกว่า ${(big / small).toFixed(1)} เท่า`;
+    $('momSummary').innerHTML = s.replace(/\n/g, '<br>') + html;
+  }
+
+  function startPush() {
+    const f = S.force;
+    if (f.running) return;
+    Object.assign(f, { running: true, t: 0, v: 0, p: 0, s: 0, next: 0, slope: false });
+    f.F = 2000 * S.mul;
+    f.series = graph.add(S.mul > 1.5 ? '#ff7326' : '#ffd91a');
+    sedan.position.set(-0.75, 0, 0);
+    $('pushBtn').disabled = true;
+  }
+
+  function refreshForce() {
+    const f = S.force, F = f.running ? f.F : 2000 * S.mul;
+    $('fMLab').textContent = `มวลรถเก๋ง  m = ${N(S.sedanM)} kg`;
+    $('mul1').classList.toggle('on', S.mul === 1);
+    $('mul2').classList.toggle('on', S.mul === 2);
+    const tShow = Math.min(f.t, 3);
+    let s = `ΣF = ${N(F)} N     เวลา t = ${F1(tShow)} / 3 s\n`;
+    s += `การดล J = ΣF·Δt = ${N(F * tShow)} N·s  =  Δp = ${N(f.p)} kg·m/s\n`;
+    s += `ความเร็วรถ v = Δp/m = ${F1(f.v)} m/s\n`;
+    s += tShow > 0.05 ? `Δp/Δt = ${N(f.p / tShow)} N  <span class="good">เท่ากับแรงลัพธ์พอดี</span>` : 'กด “ออกแรง!” แล้วดูกราฟโมเมนตัม–เวลา';
+    $('forceInfo').innerHTML = s.replace(/\n/g, '<br>');
+
+    const rows = S.runs.slice(-3);
+    $('forceTable').innerHTML = '<tr><th>รอบ</th><th>m (kg)</th><th>ΣF (N)</th><th>Δt (s)</th><th>J (N·s)</th><th>Δp (kg·m/s)</th><th>v (m/s)</th></tr>' +
+      (rows.length ? rows.map((r) => `<tr><td>${r.no}</td><td>${N(r.m)}</td><td>${N(r.F)}</td><td>3</td><td>${N(r.F * 3)}</td><td>${N(r.dp)}</td><td>${F1(r.v)}</td></tr>`).join('')
+        : '<tr><td colspan="7" class="muted">ยังไม่มีผล</td></tr>');
+    const has1 = S.runs.some((r) => r.F === 2000), has2 = S.runs.some((r) => r.F === 4000);
+    $('forceMsg2').textContent = has1 && has2 ? 'แรง 2 เท่า กราฟชันขึ้น 2 เท่า = โมเมนตัมเปลี่ยนเร็วขึ้น 2 เท่า' : '';
+    let massCompare = false;
+    for (let i = 0; i < S.runs.length; i++) for (let j = i + 1; j < S.runs.length; j++)
+      if (S.runs[i].F === S.runs[j].F && S.runs[i].m !== S.runs[j].m) massCompare = true;
+    $('forceMsg').textContent = massCompare ? 'แรงและเวลาเท่ากัน → J = Δp เท่ากัน แต่รถมวลน้อยได้ v มากกว่า' : '';
+    $('pushBtn').disabled = f.running;
+  }
+
+  function refreshBall() {
+    const b = S.ball;
+    let s = 'กำหนดทิศไปทางขวาเป็นบวก (+)\nลูกบอล m = 0.5 kg วิ่งด้วยความเร็ว 4 m/s เข้าชนผนัง แล้วเด้งกลับด้วยความเร็ว 4 m/s\n';
+    if (!b.running && !b.bounced) s += '\nกด “ปล่อยลูกบอล” แล้วสังเกตลูกศรโมเมนตัมก่อนชนและหลังชน';
+    else {
+      s += '\np ก่อนชน = mv = (0.5)(+4) = +2 kg·m/s';
+      if (b.bounced) s += '\np หลังชน = mv = (0.5)(−4) = −2 kg·m/s\nΔp = p หลัง − p ก่อน = (−2) − (+2) = −4 kg·m/s\n<span class="good">การดลจากผนัง J = Δp = −4 N·s (ทิศไปทางซ้าย)</span>';
+    }
+    $('ballInfo').innerHTML = s.replace(/\n/g, '<br>');
+  }
+
+  function update(dt) {
+    if (S.mode === 'mom') {
+      for (const [car, v, m, z, arrow, label] of [[truck, S.truckV, S.truckM, -0.18, truckArrow, truckLabel], [sedan, S.sedanV, S.sedanM, 0.18, sedanArrow, sedanLabel]]) {
+        const vis = v * 0.02;
+        car.position.x += vis * dt;
+        if (car.position.x > 0.95) car.position.x = -0.95;
+        car.position.z = z;
+        spinWheels(car, vis * dt / 0.03);
+        const p = m * v;
+        arrow.setTo(car.position.x, 0.26, z, Math.min(1.2, p / 200000));
+        label.position.set(car.position.x, 0.34, z);
+        label.setText(`p = ${N(p)} kg·m/s`);
+      }
+    } else if (S.mode === 'force') {
+      const f = S.force;
+      if (f.running) {
+        f.t += dt;
+        const tp = Math.min(f.t, 3);
+        f.v = f.F * tp / S.sedanM;
+        f.p = f.F * tp;
+        f.s += f.v * dt;
+        while (f.next <= Math.min(f.t, 4)) { f.series.pts.push([f.next, f.F * Math.min(f.next, 3)]); f.next += 0.04; }
+        if (f.t >= 3 && !f.slope) { f.slope = true; f.series.tag = { t: 3, p: f.F * 3, text: `ความชัน = ΣF = ${N(f.F)} N` }; }
+        graph.draw();
+        if (f.t >= 4) {
+          f.running = false;
+          S.runs.push({ no: S.runs.length + 1, m: S.sedanM, F: f.F, dp: f.p, v: f.v });
+        }
+        refreshForce();
+      }
+      const x = -0.75 + Math.min(1.6, f.s * 0.03);
+      sedan.position.x = x;
+      spinWheels(sedan, f.running ? f.v * 0.03 * dt / 0.03 : 0);
+      const pushing = f.running && f.t <= 3;
+      forceArrow.setTo(x - 0.42, 0.08, 0, pushing ? f.F / 8000 : 0, 0.016);
+      forceLabel.position.set(x - 0.3, 0.2, 0);
+      forceLabel.setText(pushing ? `ΣF = ${N(f.F)} N` : '');
+      dpArrow.setTo(x, 0.26, 0, f.p / 24000);
+      dpLabel.position.set(x, 0.34, 0);
+      dpLabel.setText(f.p > 1 ? `Δp = ${N(f.p)} kg·m/s` : '');
+    } else {
+      const b = S.ball;
+      if (b.running) {
+        b.x += b.vel * dt;
+        if (!b.bounced && b.x + 0.06 >= 0.57) { b.bounced = true; b.vel = -b.vel; b.x = 0.51; refreshBall(); }
+        if (b.bounced && b.x < -0.6) { b.running = false; }
+      }
+      ball.position.set(b.x, 0.06, 0);
+      const pNow = !b.running && !b.bounced ? 0 : (b.vel > 0 ? 2 : -2);
+      ballNow.setTo(b.x, 0.2, 0, pNow * 0.15);
+      ballLabel.position.set(b.x, 0.3, 0);
+      ballLabel.setText(pNow ? `p = ${pNow > 0 ? '+2' : '−2'} kg·m/s` : '');
+      ballBefore.setTo(0.15, 0.2, -0.2, b.bounced ? 0.3 : 0);
+      ballDp.setTo(0.5, 0.2, 0.2, b.bounced ? -0.6 : 0, 0.016);
+      ballDpLabel.position.set(0.2, 0.3, 0.2);
+      ballDpLabel.setText(b.bounced ? 'Δp = −4 kg·m/s  (J จากผนัง)' : '');
+    }
+  }
+
+  setMode('mom');
+  return { update, onShow: () => { if (S.mode === 'force') graph.draw(); } };
+}
+
+// ---------- ฉาก B: แบบทดสอบ ----------
+function buildSceneB(root) {
+  const Q = [
+    { q: '1. โมเมนตัมของวัตถุ ขึ้นอยู่กับปริมาณใด', c: ['มวล และ ความเร็ว', 'มวล และ เวลา', 'แรง และ ระยะทาง', 'ความเร็ว และ เวลา'], a: 0,
+      e: 'โมเมนตัม p = mv จึงขึ้นอยู่กับ มวล (m) และ ความเร็ว (v) ของวัตถุ' },
+    { q: '2. รถมวล 2 kg วิ่งด้วยความเร็ว 3 m/s มีโมเมนตัมเท่าใด', c: ['1.5 kg·m/s', '5 kg·m/s', '6 kg·m/s', '9 kg·m/s'], a: 2,
+      e: 'p = mv = 2 × 3 = 6 kg·m/s' },
+    { q: '3. แรงลัพธ์ 2 N กระทำต่อรถนาน 3 s การดล (J) ที่รถได้รับมีค่าเท่าใด', c: ['0.67 N·s', '1.5 N·s', '5 N·s', '6 N·s'], a: 3,
+      e: 'การดล J = ΣF·Δt = 2 × 3 = 6 N·s และการดลเท่ากับการเปลี่ยนโมเมนตัม (J = Δp) รถจึงมีโมเมนตัมเปลี่ยนไป 6 kg·m/s' },
+    { q: '4. ถ้าแรงลัพธ์ที่กระทำต่อรถ เพิ่มเป็น 2 เท่า อัตราการเปลี่ยนโมเมนตัม จะเป็นอย่างไร', c: ['ลดลงครึ่งหนึ่ง', 'เท่าเดิม', 'เพิ่มเป็น 2 เท่า', 'เพิ่มเป็น 4 เท่า'], a: 2,
+      e: 'แรงลัพธ์ เท่ากับ อัตราการเปลี่ยนโมเมนตัม (การเปลี่ยนโมเมนตัม หารด้วย ช่วงเวลา) แรงเพิ่ม 2 เท่า อัตราการเปลี่ยนโมเมนตัมจึงเพิ่ม 2 เท่า' },
+    { q: '5. รถพลังลูกโป่ง เคลื่อนที่ไปข้างหน้าได้ เพราะเหตุใด', c: ['ลูกโป่งดูดอากาศเข้ามาทางด้านหน้า', 'ลมพุ่งออกทางด้านหลัง ลมจึงดันรถไปข้างหน้า', 'น้ำหนักของลูกโป่งดึงรถไป', 'ล้อหมุนเอง โดยไม่มีแรงกระทำ'], a: 1,
+      e: 'ลูกโป่งดันลมออกทางด้านหลัง ลมจึงออกแรงดันรถไปข้างหน้า (แรงกิริยา และ ปฏิกิริยา) แรงลัพธ์ทำให้โมเมนตัมของรถเพิ่มขึ้นในทิศเดียวกับแรง' },
+  ];
+  const L = ['ก.', 'ข.', 'ค.', 'ง.'];
+  let idx = 0, score = 0, answered = false;
+  const results = [];
+
+  // 3 มิติ: เครื่องหมายคำถามลอย + ไฟ 5 ดวงแสดงผลแต่ละข้อ
+  const title = makeLabel('#b3d9ff', 0.9); title.position.set(0, 0.42, 0); title.setText('แบบทดสอบ 5 ข้อ'); root.add(title);
+  const qmark = makeLabel('#ffd91a', 0.5); qmark.scale.set(0.5, 0.5 / 8, 1); root.add(qmark);
+  const big = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.035, 16, 48), mat(0x3373e6, { metalness: 0.2 }));
+  big.position.set(0, 0.22, 0); root.add(big);
+  const lights = [];
+  for (let i = 0; i < 5; i++) {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.045, 20, 14), mat(0x4d5466));
+    m.position.set(-0.36 + i * 0.18, 0.05, 0.28); root.add(m); lights.push(m);
+  }
+
+  function paintLights() {
+    lights.forEach((m, i) => m.material.color.set(results[i] === true ? 0x4ade80 : results[i] === false ? 0xf87171 : 0x4d5466));
+  }
+
+  function render() {
+    const body = $('qBody');
+    if (idx >= Q.length) {
+      $('qHead').textContent = 'สรุปผลแบบทดสอบ';
+      const comment = score === Q.length ? 'เยี่ยมมาก!' : score >= 3 ? 'ดีมาก' : 'ลองทบทวนอีกครั้งนะ';
+      body.innerHTML = `<div class="score">คะแนนของคุณ ${score} / ${Q.length}</div><div class="msg" style="text-align:center">${comment}</div>
+        <div class="info muted" style="text-align:center">จดคะแนนลงในใบกิจกรรมที่ 1 ข้อ 5 ได้เลย</div>
+        <div class="row"><button class="btn on" id="qRestart">ทำใหม่</button></div>`;
+      $('qRestart').onclick = () => { idx = 0; score = 0; results.length = 0; answered = false; paintLights(); render(); };
+      return;
+    }
+    const q = Q[idx];
+    $('qHead').textContent = `แบบทดสอบ ข้อ ${idx + 1} / ${Q.length}     คะแนน ${score}`;
+    body.innerHTML = `<div class="q">${q.q}</div>` +
+      q.c.map((c, i) => `<button class="choice" data-i="${i}">${L[i]} ${c}</button>`).join('') +
+      `<div class="info" id="qFeed"></div><div class="row"><button class="btn on" id="qNext" style="display:none">${idx === Q.length - 1 ? 'ดูคะแนน' : 'ข้อต่อไป'}</button></div>`;
+    body.querySelectorAll('.choice').forEach((b) => b.onclick = () => answer(+b.dataset.i));
+    $('qNext').onclick = () => { idx++; answered = false; render(); };
+    answered = false;
+  }
+
+  function answer(i) {
+    if (answered) return;
+    answered = true;
+    const q = Q[idx], ok = i === q.a;
+    if (ok) score++;
+    results[idx] = ok;
+    paintLights();
+    $('qBody').querySelectorAll('.choice').forEach((b) => {
+      const k = +b.dataset.i;
+      if (k === q.a) b.classList.add('right');
+      else if (k === i) b.classList.add('wrong');
+    });
+    $('qFeed').innerHTML = (ok ? '<span class="good"><b>ถูกต้อง!</b></span> ' : '<span class="bad"><b>ยังไม่ถูก</b></span> ') + q.e;
+    $('qHead').textContent = `แบบทดสอบ ข้อ ${idx + 1} / ${Q.length}     คะแนน ${score}`;
+    $('qNext').style.display = '';
+  }
+
+  qmark.position.set(0, 0.22, 0);
+  qmark.setText('?');
+  qmark.scale.set(0.9, 0.9 / 8, 1);
+  render();
+  let t = 0;
+  return { update: (dt) => { t += dt; big.rotation.y = t * 1.2; big.position.y = 0.22 + Math.sin(t * 2) * 0.02; }, onShow: () => {} };
+}
+
+// ---------- ฉาก C: ห้องทดลองรถลูกโป่ง ----------
+function buildSceneC(root) {
+  const sizeNames = ['เล็ก', 'กลาง', 'ใหญ่'];
+  const thrustF0 = [0.12, 0.16, 0.20];      // แรงจากลมสูงสุด (N)
+  const thrustT = [1.0, 1.3, 1.6];          // เวลาที่ลมพ่น (s)
+  const muSmooth = 0.08, muRough = 0.20, dragK = 0.004, g = 9.81;
+  const trackM = 5, WPM = 0.3, startX = -0.75;
+  const S = { size: 1, massG: 60, smooth: true, running: false, simT: 0, vel: 0, dist: 0, pMax: 0, net: 0, acc: 0, next: 0, trial: 0, results: [], series: null };
+
+  // ลู่ทดลอง
+  const track = new THREE.Mesh(new THREE.BoxGeometry(trackM * WPM + 0.1, 0.008, 0.22), mat(0x2f3646));
+  track.position.set(startX + trackM * WPM / 2, 0, 0); root.add(track);
+  const zone = new THREE.Mesh(new THREE.BoxGeometry(WPM, 0.01, 0.22), mat(0xffd91a, { transparent: true, opacity: 0.45 }));
+  zone.position.set(startX + 1.5 * WPM, 0.002, 0); root.add(zone);
+  for (let m = 0; m <= trackM; m++) {
+    const tick = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.012, 0.22), mat(0xffffff));
+    tick.position.set(startX + m * WPM, 0.003, 0); root.add(tick);
+    const lab = makeLabel('#ffffff', 0.32); lab.position.set(startX + m * WPM, 0.03, 0.17); lab.setText(`${m} m`); root.add(lab);
+  }
+  const zoneLab = makeLabel('#ffd91a', 0.5); zoneLab.position.set(startX + 1.5 * WPM, 0.03, -0.17); zoneLab.setText('ช่วงจับเวลา 1–2 m'); root.add(zoneLab);
+
+  // รถลูกโป่ง
+  const car = new THREE.Group(); root.add(car);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.012, 0.09), mat(0xe8d5a8)); body.position.y = 0.03; car.add(body);
+  const wheels = [];
+  for (const x of [-0.045, 0.045]) for (const z of [-0.055, 0.055]) {
+    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.01, 20), mat(0xd93333));
+    w.rotation.x = Math.PI / 2; w.position.set(x, 0.02, z); car.add(w); wheels.push(w);
+  }
+  const balloon = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), mat(0xff6fa8, { roughness: 0.35 }));
+  car.add(balloon);
+  const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.07, 10), mat(0xffffff));
+  nozzle.rotation.z = Math.PI / 2; nozzle.position.set(-0.075, 0.045, 0); car.add(nozzle);
+  const puffs = [];
+  const puffMat = new THREE.MeshBasicMaterial({ color: 0xcfefff, transparent: true, opacity: 0.8 });
+  const puffGeo = new THREE.SphereGeometry(1, 8, 6);
+  let puffTimer = 0;
+
+  const forceArrow = makeArrow(0xff3333), pArrow = makeArrow(0x33d9ff);
+  const forceLabel = makeLabel('#ff6b6b', 0.42), pLabel = makeLabel('#33d9ff', 0.5);
+  root.add(forceArrow, pArrow, forceLabel, pLabel);
+
+  const graph = new Graph($('cGraph'), { tMax: 6, pMax: 0.15, pStep: 0.05, fmt: (p) => p.toFixed(2), maxSeries: 3 });
+  const seriesColors = ['#ffd91a', '#33d9ff', '#ff7326', '#4ade80', '#d08cff'];
+
+  // --- UI ---
+  document.querySelectorAll('#sizeRow button').forEach((b) => b.onclick = () => { if (S.running) return; S.size = +b.dataset.size; refreshSetting(); });
+  $('cM').oninput = (e) => { if (S.running) { e.target.value = S.massG; return; } S.massG = +e.target.value; refreshSetting(); };
+  $('wSmooth').onclick = () => { if (!S.running) { S.smooth = true; refreshSetting(); } };
+  $('wRough').onclick = () => { if (!S.running) { S.smooth = false; refreshSetting(); } };
+  $('launchBtn').onclick = launch;
+  $('clearC').onclick = () => { if (S.running) return; S.results = []; S.trial = 0; graph.clear(); resetCar(); refreshTable(); $('cLive').textContent = 'ปรับตัวแปร แล้วกด “ปล่อยรถ!”'; };
+
+  const mu = () => (S.smooth ? muSmooth : muRough);
+  const thrust = (t) => (t < thrustT[S.size] ? thrustF0[S.size] * (1 - t / thrustT[S.size]) : 0);
+
+  function refreshSetting() {
+    document.querySelectorAll('#sizeRow button').forEach((b) => b.classList.toggle('on', +b.dataset.size === S.size));
+    $('wSmooth').classList.toggle('on', S.smooth); $('wRough').classList.toggle('on', !S.smooth);
+    const m = S.massG / 1000;
+    $('cMLab').textContent = `มวลรถ  m = ${S.massG} g  (${F3(m)} kg)`;
+    $('cSetting').textContent = `แรงจากลมสูงสุด ${F2(thrustF0[S.size])} N  พ่นนาน ${F1(thrustT[S.size])} s     แรงเสียดทาน ${F3(mu() * m * g)} N`;
+    if (!S.running) setBalloon(1);
+  }
+
+  function resetCar() { Object.assign(S, { simT: 0, vel: 0, dist: 0, pMax: 0, net: 0, acc: 0, next: 0 }); car.position.x = startX; setBalloon(1); }
+
+  function setBalloon(left) {
+    const r = [0.03, 0.04, 0.05][S.size] * left;
+    balloon.scale.setScalar(r);
+    balloon.position.set(0.0, 0.036 + r, 0);
+  }
+
+  function launch() {
+    if (S.running) return;
+    resetCar();
+    S.running = true; S.trial++;
+    S.series = graph.add(seriesColors[(S.trial - 1) % seriesColors.length]);
+    S.series.tag = null;
+    S.stuck = thrustF0[S.size] <= mu() * (S.massG / 1000) * g;
+    $('launchBtn').disabled = true;
+    if (S.stuck) $('cLive').innerHTML = '<span class="bad"><b>แรงจากลมน้อยกว่าแรงเสียดทาน รถไม่ออกตัว!</b></span><br>ลองลดมวลรถ ใช้ล้อลื่น หรือใช้ลูกโป่งใหญ่ขึ้น';
+  }
+
+  function step(h) {
+    const m = S.massG / 1000, F = thrust(S.simT), fric = mu() * m * g;
+    if (S.vel <= 0.0001) { S.vel = 0; S.net = F > fric ? F - fric : 0; }
+    else S.net = F - fric - dragK * S.vel * S.vel;
+    S.vel += S.net / m * h;
+    if (S.vel < 0) { S.vel = 0; S.net = 0; }
+    S.dist += S.vel * h;
+    S.simT += h;
+    S.pMax = Math.max(S.pMax, m * S.vel);
+    while (S.next <= S.simT && S.next <= 6) { S.series.pts.push([S.next, m * S.vel]); S.next += 0.05; }
+    if ((S.simT > thrustT[S.size] && S.vel <= 0) || S.simT > 20) finish();
+  }
+
+  function finish() {
+    S.running = false;
+    $('launchBtn').disabled = false;
+    S.results.push({ no: S.trial, size: S.size, mass: S.massG, smooth: S.smooth, pMax: S.pMax, dist: S.dist });
+    if (S.stuck || S.dist < 0.001) $('cLive').innerHTML = `<span class="bad">ชุดที่ ${S.trial} รถไม่ออกตัว</span> เพราะแรงจากลมน้อยกว่าแรงเสียดทาน`;
+    else $('cLive').innerHTML = `จบการทดลองชุดที่ ${S.trial}<br>p สูงสุด = ${F3(S.pMax)} kg·m/s     ระยะทาง = ${F2(S.dist)} m` + (S.dist >= 3 ? '   <span class="good"><b>ไกลเกิน 3 m!</b></span>' : '');
+    setBalloon(1);
+    refreshTable();
+  }
+
+  function refreshTable() {
+    const rows = S.results.slice(-5);
+    let best = -1;
+    if (rows.length > 1) rows.forEach((r, i) => { if (best < 0 || r.dist > rows[best].dist) best = i; });
+    $('cTable').innerHTML = '<tr><th>ชุด</th><th>ลูกโป่ง</th><th>มวล (g)</th><th>ล้อ</th><th>p สูงสุด (kg·m/s)</th><th>ระยะ (m)</th></tr>' +
+      (rows.length ? rows.map((r, i) => `<tr class="${i === best ? 'best' : ''}"><td>${r.no}</td><td>${sizeNames[r.size]}</td><td>${r.mass}</td><td>${r.smooth ? 'ลื่น' : 'ฝืด'}</td><td>${F3(r.pMax)}</td><td>${F2(r.dist)}${i === best ? ' ไกลสุด' : ''}</td></tr>`).join('')
+        : '<tr><td colspan="6" class="muted">ยังไม่มีผล</td></tr>');
+  }
+
+  function spawnPuff() {
+    const p = new THREE.Mesh(puffGeo, puffMat.clone());
+    p.position.set(car.position.x - 0.11, 0.045, (Math.random() - 0.5) * 0.015);
+    p.userData = { age: 0, vx: -0.25 - Math.random() * 0.1, vy: (Math.random() - 0.3) * 0.05 };
+    root.add(p); puffs.push(p);
+  }
+
+  function update(dt) {
+    if (S.running) {
+      S.acc += dt;
+      while (S.acc >= 0.01 && S.running) { S.acc -= 0.01; step(0.01); }
+      const m = S.massG / 1000;
+      car.position.x = startX + Math.min(S.dist, trackM + 0.3) * WPM;
+      for (const w of wheels) w.rotation.y += S.vel * WPM / 0.02 * dt;
+      const T = thrustT[S.size];
+      setBalloon(Math.max(0.3, Math.sqrt(Math.max(0, Math.min(1, 1 - S.simT / T)))));
+      if (thrust(S.simT) > 0) { puffTimer += dt; while (puffTimer > 0.03) { puffTimer -= 0.03; spawnPuff(); } }
+      const cx = car.position.x;
+      forceArrow.setTo(cx, 0.17, 0, S.net / 0.2 * 0.18);
+      forceLabel.position.set(cx, 0.21, -0.07);
+      forceLabel.setText(Math.abs(S.net) > 0.0005 ? `ΣF = ${F2(S.net)} N` : '');
+      pArrow.setTo(cx, 0.25, 0, m * S.vel / 0.15 * 0.3);
+      pLabel.position.set(cx, 0.3, 0);
+      pLabel.setText(S.vel > 0.001 ? `p = ${F3(m * S.vel)} kg·m/s` : '');
+      graph.draw();
+      if (S.running && !S.stuck) {
+        $('cLive').innerHTML = `t = ${F1(S.simT)} s     v = ${F2(S.vel)} m/s     ระยะ = ${F2(S.dist)} m<br>p = mv = ${F3(m * S.vel)} kg·m/s     ΣF = ${F3(S.net)} N` +
+          (thrust(S.simT) > 0 ? '   (ลมกำลังพ่น)' : '   (ลมหมด รถค่อย ๆ ช้าลง)');
+      }
+    } else { forceArrow.visible = false; forceLabel.setText(''); }
+    for (let i = puffs.length - 1; i >= 0; i--) {
+      const p = puffs[i], d = p.userData;
+      d.age += dt;
+      const life = 0.45;
+      if (d.age > life) { root.remove(p); p.material.dispose(); puffs.splice(i, 1); continue; }
+      p.position.x += d.vx * dt; p.position.y += d.vy * dt;
+      const s = (0.006 + 0.012 * d.age / life) * (1 - d.age / life);
+      p.scale.setScalar(Math.max(0.001, s));
+      p.material.opacity = 0.8 * (1 - d.age / life);
+    }
+  }
+
+  resetCar(); refreshSetting(); refreshTable();
+  return { update, onShow: () => graph.draw() };
+}
+
+// ---------- ฉาก D: คู่มือประกอบรถ ----------
+function buildSceneD(root) {
+  const titles = ['ขั้นที่ 1 / 5 : ตัวถัง', 'ขั้นที่ 2 / 5 : เพลาในหลอด', 'ขั้นที่ 3 / 5 : ล้อ', 'ขั้นที่ 4 / 5 : ลูกโป่งกับหลอดหัวฉีด', 'ขั้นที่ 5 / 5 : เช็กลิสต์ก่อนทดสอบ'];
+  const texts = [
+    'ตัดฟิวเจอร์บอร์ดเป็นฐานรถ กว้างไม่เกิน 15 ซม. ยาวไม่เกิน 20 ซม.',
+    'ติดหลอดดูด 2 หลอดใต้ฐานด้วยเทปใส แล้วสอดไม้เสียบลูกชิ้นเข้าไปในหลอด เป็นเพลาหน้าและเพลาหลัง',
+    'เจาะรูตรงกลางฝาขวด 4 ฝา แล้วเสียบเข้าที่ปลายเพลาทั้ง 2 ข้าง',
+    'สอดหลอดหัวฉีดเข้าไปในปากลูกโป่ง พันยางรัดให้แน่น แล้วติดหลอดบนฐาน ให้ปลายหลอดยื่นออกทางด้านหลังรถ',
+    'แตะแต่ละข้อเมื่อตรวจแล้ว ครบ 5 ข้อจึงนำรถไปทดสอบ',
+  ];
+  const warns = ['', 'จุดเตือน: เพลาทั้ง 2 อันต้องขนานกัน ถ้าไม่ขนาน รถจะวิ่งเบี่ยงและเสียโมเมนตัม',
+    'จุดเตือน: ล้อต้องไม่เสียดสีตัวถัง เว้นช่องห่างเล็กน้อย ไม่อย่างนั้นแรงเสียดทานจะทำให้รถช้าลง',
+    'จุดเตือน: หัวฉีดต้องอยู่ตรงแนวกลางรถ ไม่อย่างนั้นแรงจากลมจะดันรถให้เบี้ยว', ''];
+  const checks = ['1. ล้อทั้ง 4 หมุนได้คล่อง ไม่ติดขัด', '2. เพลาหน้าและเพลาหลังขนานกัน', '3. ล้อไม่เสียดสีกับตัวถัง', '4. หัวฉีดอยู่ตรงแนวกลางรถ', '5. ลูกโป่งติดกับหลอดแน่น ลมไม่รั่ว'];
+  const done = [false, false, false, false, false];
+  let stepNo = 0;
+
+  // ชิ้นส่วน (ขนาดจริง 20 × 15 ซม. ย่อลง)
+  const parts = [new THREE.Group(), new THREE.Group(), new THREE.Group(), new THREE.Group()];
+  parts.forEach((p) => root.add(p));
+  const board = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.022, 0.45), mat(0xe8d5a8)); board.position.y = 0.11; parts[0].add(board);
+  for (const x of [-0.2, 0.2]) {
+    const straw = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.42, 12), mat(0xffffff, { transparent: true, opacity: 0.75 }));
+    straw.rotation.x = Math.PI / 2; straw.position.set(x, 0.085, 0); parts[1].add(straw);
+    const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.6, 8), mat(0xb5824a));
+    stick.rotation.x = Math.PI / 2; stick.position.set(x, 0.085, 0); parts[1].add(stick);
+    for (const z of [-0.27, 0.27]) {
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.03, 28), mat(0xd93333));
+      cap.rotation.x = Math.PI / 2; cap.position.set(x, 0.085, z); parts[2].add(cap);
+    }
+  }
+  const balloon = new THREE.Mesh(new THREE.SphereGeometry(0.11, 28, 18), mat(0xff6fa8, { roughness: 0.35 }));
+  balloon.scale.set(1.15, 0.9, 0.9); balloon.position.set(0.08, 0.24, 0); parts[3].add(balloon);
+  const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.42, 12), mat(0xffffff));
+  nozzle.rotation.z = Math.PI / 2; nozzle.position.set(-0.17, 0.15, 0); parts[3].add(nozzle);
+  const band = new THREE.Mesh(new THREE.TorusGeometry(0.02, 0.006, 8, 20), mat(0xf2c200));
+  band.rotation.y = Math.PI / 2; band.position.set(-0.04, 0.15, 0); parts[3].add(band);
+
+  const warnPos = [null, [0.2, 0.085, 0.24], [0.2, 0.085, 0.235], [-0.38, 0.15, 0]];
+  const warnDot = new THREE.Mesh(new THREE.SphereGeometry(0.035, 20, 14), new THREE.MeshBasicMaterial({ color: 0xff2020, transparent: true, depthTest: false }));
+  warnDot.renderOrder = 8; root.add(warnDot);
+  const stepLabel = makeLabel('#b3d9ff', 0.8); stepLabel.position.set(0, 0.45, 0); root.add(stepLabel);
+  const drops = [0, 0, 0, 0];
+
+  $('dBack').onclick = () => { if (stepNo > 0) { stepNo--; render(); } };
+  $('dNext').onclick = () => { stepNo = stepNo < 4 ? stepNo + 1 : 0; if (stepNo === 0) done.fill(false); render(true); };
+
+  function render(forward) {
+    $('dTitle').textContent = titles[stepNo];
+    $('dText').textContent = texts[stepNo];
+    $('dWarn').textContent = warns[stepNo];
+    $('dNext').textContent = stepNo < 4 ? 'ถัดไป' : 'เริ่มใหม่';
+    $('dBack').disabled = stepNo === 0;
+    stepLabel.setText(titles[stepNo]);
+    parts.forEach((p, i) => { p.visible = i <= Math.min(stepNo, 3); });
+    if (forward && stepNo <= 3) drops[stepNo] = 0.45;
+    if (stepNo === 0 && forward) drops.fill(0), drops[0] = 0.45;
+    const box = $('dChecks');
+    if (stepNo === 4) {
+      box.innerHTML = checks.map((c, i) => `<label class="check ${done[i] ? 'done' : ''}"><input type="checkbox" data-i="${i}" ${done[i] ? 'checked' : ''}>${c}</label>`).join('');
+      box.querySelectorAll('input').forEach((el) => el.onchange = () => { done[+el.dataset.i] = el.checked; render(); });
+      const n = done.filter(Boolean).length;
+      $('dStatus').innerHTML = n === 5 ? '<span class="good">ครบ 5 ข้อแล้ว พร้อมนำรถไปทดสอบ!</span>' : `ตรวจแล้ว ${n} / 5 ข้อ`;
+    } else { box.innerHTML = ''; $('dStatus').textContent = ''; }
+  }
+
+  let t = 0;
+  function update(dt) {
+    t += dt;
+    parts.forEach((p, i) => { drops[i] = Math.max(0, drops[i] - dt * 0.9); p.position.y = drops[i] * drops[i] * 2.2; });
+    const wp = warnPos[stepNo];
+    warnDot.visible = !!wp;
+    if (wp) {
+      warnDot.position.set(...wp);
+      const s = 1 + 0.35 * Math.sin(t * 8);
+      warnDot.scale.setScalar(s);
+      warnDot.material.opacity = 0.55 + 0.45 * Math.abs(Math.sin(t * 4));
+    }
+  }
+
+  drops[0] = 0.45;
+  render();
+  return { update, onShow: () => {} };
+}
+
+// ---------- เริ่มระบบ AR ----------
+let current = -1;
+const sceneEls = ['sceneA', 'sceneB', 'sceneC', 'sceneD'].map($);
+const scenes = [];
+
+function showPanel(i) {
+  current = i;
+  $('panel').style.display = 'flex';
+  $('panelTitle').textContent = SCENE_NAMES[i];
+  sceneEls.forEach((el, k) => el.classList.toggle('on', k === i));
+  requestAnimationFrame(() => scenes[i] && scenes[i].onShow());
+}
+
+$('collapseBtn').onclick = () => {
+  const p = $('panel');
+  p.classList.toggle('collapsed');
+  $('collapseBtn').textContent = p.classList.contains('collapsed') ? 'ขยาย' : 'ย่อ';
+  if (!p.classList.contains('collapsed') && current >= 0) requestAnimationFrame(() => scenes[current].onShow());
+};
+
+async function start() {
+  $('startBtn').disabled = true;
+  $('startMsg').style.color = '#9fb4d8';
+  $('startMsg').textContent = 'กำลังเปิดกล้องและโหลดภาพ marker...';
+  try { await document.fonts.load('600 64px Sarabun'); } catch (e) {}
+
+  const mindar = new MindARThree({
+    container: $('ar'),
+    imageTargetSrc: './targets.mind',
+    maxTrack: 1,
+    uiScanning: 'no',
+    filterMinCF: 0.0001,
+    filterBeta: 0.001,
+  });
+  const { renderer, scene, camera } = mindar;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.6));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(0.5, 1, 1); scene.add(sun);
+
+  const builders = [buildSceneA, buildSceneB, buildSceneC, buildSceneD];
+  for (let i = 0; i < 4; i++) {
+    const anchor = mindar.addAnchor(i);
+    const root = new THREE.Group();
+    root.rotation.x = Math.PI / 2;   // ให้เนื้อหาตั้งขึ้นจากกระดาษที่วางราบบนโต๊ะ
+    anchor.group.add(root);
+    scenes[i] = builders[i](root);
+    anchor.onTargetFound = () => {
+      $('chip').classList.add('found');
+      $('chipText').textContent = SCENE_NAMES[i];
+      if (current !== i) showPanel(i);
+    };
+    anchor.onTargetLost = () => {
+      $('chip').classList.remove('found');
+      $('chipText').textContent = 'ส่องกล้องไปที่ภาพ A, B, C หรือ D';
+    };
+  }
+
+  try {
+    await mindar.start();
+  } catch (err) {
+    $('startBtn').disabled = false;
+    $('startMsg').style.color = '';
+    $('startMsg').textContent = 'เปิดกล้องไม่ได้ ตรวจว่าเปิดผ่านลิงก์ https และกดอนุญาตให้ใช้กล้องแล้ว จากนั้นลองใหม่';
+    console.error(err);
+    return;
+  }
+  $('start').style.display = 'none';
+  $('chip').style.display = 'flex';
+
+  const clock = new THREE.Clock();
+  renderer.setAnimationLoop(() => {
+    const dt = Math.min(clock.getDelta(), 0.05);
+    for (const s of scenes) s.update(dt);
+    renderer.render(scene, camera);
+  });
+  window.addEventListener('resize', () => { if (current >= 0) scenes[current].onShow(); });
+}
+
+$('startBtn').onclick = start;
+</script>
+</body>
+</html>
