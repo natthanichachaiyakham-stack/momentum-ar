@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Impulse AR – การดลและการอนุรักษ์โมเมนตัม</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+    "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+  }
+}
+</script>
+<style>
+  :root {
+    --panel: rgba(28, 38, 64, 0.94);
+    --panel-solid: #1c2640;
+    --line: rgba(255,255,255,0.14);
+    --text: #ffffff;
+    --muted: #9fb4d8;
+    --tab-on: #3373e6;
+    --tab-off: #4d5466;
+    --momentum: #33d9ff;
+    --force: #ff3333;
+    --dp: #ffd91a;
+    --orange: #ff7326;
+    --good: #4ade80;
+    --bad: #f87171;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: #000; color: var(--text);
+    font-family: "Sarabun", "Thonburi", "Tahoma", sans-serif; overflow: hidden; }
+  #ar { position: fixed; inset: 0; }
+
+  /* หน้าเริ่มต้น */
+  #start { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px; padding: 32px 24px;
+    background: radial-gradient(circle at 50% 30%, #2a3b66, #101729 70%); text-align: center; }
+  #start h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; }
+  #start .sub { margin: 0; color: var(--muted); font-size: 18px; max-width: 26em; line-height: 1.5; }
+  .markers { display: flex; gap: 10px; margin: 6px 0; }
+  .markers span { width: 46px; height: 46px; border-radius: 10px; border: 3px solid #fff;
+    display: grid; place-items: center; font-weight: 700; font-size: 24px; }
+  #startBtn { font: inherit; font-size: 22px; font-weight: 700; color: #fff; background: var(--force);
+    border: 0; border-radius: 14px; padding: 14px 40px; cursor: pointer; }
+  #startMsg { color: var(--bad); font-size: 16px; min-height: 1.4em; max-width: 24em; }
+  #start .small { color: var(--muted); font-size: 14px; }
+
+  /* แถบสถานะด้านบน */
+  #chip { position: fixed; z-index: 20; top: calc(env(safe-area-inset-top, 0px) + 10px); left: 50%;
+    transform: translateX(-50%); background: var(--panel); border-radius: 999px;
+    padding: 8px 16px; font-size: 16px; display: none; align-items: center; gap: 8px; white-space: nowrap; }
+  #chip .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--bad); }
+  #chip.found .dot { background: var(--good); }
+
+  #slowBtn, #soundBtn { position: fixed; z-index: 21; top: calc(env(safe-area-inset-top, 0px) + 54px);
+    display: none; font: inherit; font-size: 16px; color: #fff; background: var(--panel);
+    border: 2px solid transparent; border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+  #slowBtn { right: 12px; }
+  #soundBtn { left: 12px; }
+  #slowBtn.on { border-color: var(--dp); color: var(--dp); }
+  #confetti { position: fixed; inset: 0; z-index: 25; pointer-events: none; width: 100%; height: 100%; }
+
+  /* แผงควบคุมด้านล่าง */
+  #panel { position: fixed; z-index: 20; left: 50%; transform: translateX(-50%);
+    bottom: 0; width: min(100%, 620px); max-height: 52vh; display: none; flex-direction: column;
+    background: var(--panel); border-radius: 18px 18px 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px); }
+  #panel.collapsed .body { display: none; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 10px 14px 8px; border-bottom: 1px solid var(--line); }
+  .head h2 { margin: 0; font-size: 19px; font-weight: 700; color: #b3d9ff; }
+  .head button { font: inherit; font-size: 15px; color: #fff; background: var(--tab-off); border: 0;
+    border-radius: 10px; padding: 6px 12px; cursor: pointer; }
+  .body { overflow-y: auto; padding: 10px 14px 14px; -webkit-overflow-scrolling: touch; }
+  .scene { display: none; }
+  .scene.on { display: block; }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .tabs button, .btn { font: inherit; font-size: 16px; color: #fff; background: var(--tab-off);
+    border: 0; border-radius: 10px; padding: 9px 10px; cursor: pointer; flex: 1; }
+  .tabs button.on, .btn.on { background: var(--tab-on); }
+  .btn.go { background: #d93333; font-weight: 700; font-size: 18px; }
+  .btn:disabled { opacity: 0.5; }
+  .row { display: flex; gap: 8px; margin: 8px 0; }
+  label.sl { display: block; margin: 6px 0 2px; font-size: 16px; }
+  input[type=range] { width: 100%; accent-color: var(--tab-on); height: 28px; }
+  .info { font-size: 16px; line-height: 1.55; margin: 8px 0; white-space: pre-line; }
+  .msg { font-size: 16px; font-weight: 700; margin: 6px 0; }
+  .good { color: var(--good); } .bad { color: var(--bad); } .muted { color: var(--muted); }
+  .orange { color: var(--orange); }
+  canvas.graph { width: 100%; height: 170px; display: block; background: rgba(0,0,0,0.25);
+    border-radius: 10px; margin: 8px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 6px; }
+  th, td { border: 1px solid var(--line); padding: 4px 5px; text-align: center; }
+  th { color: var(--muted); font-weight: 600; }
+  tr.best td { color: var(--good); font-weight: 700; }
+  .tablewrap { overflow-x: auto; }
+
+  /* แบบทดสอบ */
+  .q { font-size: 18px; line-height: 1.5; margin: 6px 0 10px; }
+  .choice { display: block; width: 100%; text-align: left; font: inherit; font-size: 17px; color: #fff;
+    background: var(--tab-off); border: 0; border-radius: 10px; padding: 10px 12px; margin: 6px 0; cursor: pointer; }
+  .choice.right { background: #1f9d55; }
+  .choice.wrong { background: #c53030; }
+  .score { font-size: 28px; font-weight: 700; text-align: center; margin: 14px 0 6px; }
+
+  /* เช็กลิสต์ */
+  .check { display: flex; gap: 10px; align-items: center; padding: 9px 10px; margin: 6px 0;
+    border-radius: 10px; background: var(--tab-off); font-size: 16px; cursor: pointer; }
+  .check input { width: 22px; height: 22px; accent-color: var(--good); }
+  .check.done { background: #1f7a45; }
+  .warn { color: var(--bad); font-weight: 600; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+  .chip { font: inherit; font-size: 14px; color: #fff; background: var(--tab-off); border: 0; border-radius: 999px; padding: 6px 10px; cursor: pointer; }
+  .chip.on { background: var(--tab-on); }
+  .tabs button { font-size: 14px; }
+  table { font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div id="ar"></div>
+
+<div id="start">
+  <h1>Impulse AR</h1>
+  <p class="sub">การดลและการอนุรักษ์โมเมนตัม<br>ส่องกล้องไปที่ภาพ marker ในใบความรู้และใบกิจกรรมที่ 2</p>
+  <div class="markers"><span>1</span><span>2</span><span>4</span><span>5</span></div>
+  <button id="startBtn">เปิดกล้อง</button>
+  <div id="startMsg"></div>
+  <a class="small" href="./real.html" style="color:#ffd91a">AR-3 ของจริงรอบตัว (หมวกกันน็อก ถุงลมนิรภัย กล่องไข่) แตะที่นี่</a>
+  <div class="small">เมื่อเบราว์เซอร์ถาม ให้กด “อนุญาต” ใช้กล้อง</div>
+</div>
+
+<div id="chip"><span class="dot"></span><span id="chipText">ส่องกล้องไปที่ภาพ AR-1, 2, 4 หรือ 5</span></div>
+<button id="slowBtn">🐢 ช้า</button>
+<button id="soundBtn">🔊</button>
+<canvas id="confetti"></canvas>
+
+<div id="panel">
+  <div class="head"><h2 id="panelTitle"></h2><button id="collapseBtn">ย่อ</button></div>
+  <div class="body">
+
+    <!-- AR-1 Momentum Collision Lab -->
+    <div class="scene" id="s1">
+      <div class="tabs">
+        <button data-mode="stick" class="on">ชนแล้วติดกันไป</button>
+        <button data-mode="bounce">ชนแล้วแยกกัน</button>
+        <button data-mode="spring">ดีดตัวด้วยสปริง</button>
+      </div>
+      <label class="sl" id="m1Lab"></label><input type="range" id="m1" min="0.5" max="3" step="0.5" value="1">
+      <div id="u1Row"><label class="sl" id="u1Lab"></label><input type="range" id="u1" min="0" max="3" step="0.5" value="2"></div>
+      <label class="sl" id="m2Lab"></label><input type="range" id="m2" min="0.5" max="3" step="0.5" value="1">
+      <div id="u2Row"><label class="sl" id="u2Lab"></label><input type="range" id="u2" min="-3" max="3" step="0.5" value="0"></div>
+      <div id="jRow" style="display:none"><label class="sl" id="jLab"></label><input type="range" id="jS" min="0.5" max="3" step="0.5" value="1.5"></div>
+      <div class="row">
+        <button class="btn go" id="c1Go">เริ่มชน!</button>
+        <button class="btn" id="c1Clr" style="flex:0.5">ล้างผล</button>
+      </div>
+      <div class="info" id="c1Info"></div>
+      <canvas class="graph" id="c1Bars" style="height:120px"></canvas>
+      <div class="msg good" id="c1Msg"></div>
+      <div class="muted" style="font-size:14px">ตารางผล (4 ครั้งล่าสุด) จดลงใบกิจกรรมที่ 2 ข้อ 4</div>
+      <div class="tablewrap"><table id="c1Table"></table></div>
+    </div>
+
+    <!-- AR-2 ไข่ตก: พื้นแข็ง vs ฟองน้ำ -->
+    <div class="scene" id="s2">
+      <div class="row">
+        <button class="btn go" id="e2Go">ปล่อยไข่ทั้ง 2 ฟอง!</button>
+        <button class="btn" id="e2Again" style="flex:0.6">ดูซ้ำ</button>
+      </div>
+      <div class="info" id="e2Info"></div>
+      <canvas class="graph" id="e2Graph"></canvas>
+      <div class="tablewrap"><table id="e2Table"></table></div>
+      <div class="msg good" id="e2Msg"></div>
+    </div>
+
+    <!-- AR-4 Egg Drop Lab -->
+    <div class="scene" id="s4">
+      <label class="sl">วัสดุรองรับ (ราคาตามตารางวัสดุเสริม)</label>
+      <div class="chips" id="matRow"></div>
+      <label class="sl" id="layLab"></label><input type="range" id="lay" min="1" max="4" step="1" value="1">
+      <label class="sl">ความสูงที่ปล่อย</label>
+      <div class="row" id="hRow">
+        <button class="btn" data-h="1">1 m</button>
+        <button class="btn on" data-h="2">2 m</button>
+        <button class="btn" data-h="3">3 m</button>
+      </div>
+      <div class="info muted" id="d4Set"></div>
+      <div class="row">
+        <button class="btn go" id="d4Go">ปล่อยไข่!</button>
+        <button class="btn" id="d4Slow" style="flex:0.7">ดูซ้ำแบบสโลว์โมชัน</button>
+        <button class="btn" id="d4Clr" style="flex:0.45">ล้างผล</button>
+      </div>
+      <div class="info" id="d4Info">เลือกวัสดุ จำนวนชั้น และความสูง แล้วกด “ปล่อยไข่!”</div>
+      <canvas class="graph" id="d4Graph"></canvas>
+      <div class="muted" style="font-size:14px">ตารางผล (5 ครั้งล่าสุด) บันทึก Δt และแรงดลลงใบกิจกรรมที่ 2</div>
+      <div class="tablewrap"><table id="d4Table"></table></div>
+    </div>
+
+    <!-- AR-5 ด่านปลดล็อกงบประมาณ -->
+    <div class="scene" id="s5">
+      <div class="muted" id="qHead"></div>
+      <div id="qBody"></div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { MindARThree } from 'mindar-image-three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+// ===== ตั้งค่าที่แก้ได้ =====
+const MODEL_YAW = Math.PI / 2;   // หมุนโมเดลรถ Kenney ให้หันไปทางขวา (ถ้ารถหันผิดทาง ลองเปลี่ยนเป็น -Math.PI / 2)
+const SCENE_NAMES = ['AR-1 Momentum Collision Lab', 'AR-2 ไข่ตก: พื้นแข็ง vs ฟองน้ำ', 'AR-4 Egg Drop Lab', 'AR-5 ด่านปลดล็อกงบประมาณ'];
+
+const $ = (id) => document.getElementById(id);
+const N = (x) => Math.round(x).toLocaleString('en-US');
+const F1 = (x) => x.toFixed(1), F2 = (x) => x.toFixed(2), F3 = (x) => x.toFixed(3);
+
+// ---------- ตัวช่วยสร้างวัตถุ 3 มิติ ----------
+function mat(color, opts = {}) { return new THREE.MeshStandardMaterial({ color, roughness: 0.6, ...opts }); }
+
+function makeArrow(color) {
+  const g = new THREE.Group();
+  const m = new THREE.MeshBasicMaterial({ color, depthTest: false, transparent: true });
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 12), m);
+  const head = new THREE.Mesh(new THREE.ConeGeometry(1, 1, 16), m);
+  shaft.renderOrder = head.renderOrder = 5;
+  g.add(shaft, head);
+  g.visible = false;
+  g.setTo = (x, y, z, len, thick = 0.012) => {
+    const L = Math.abs(len);
+    if (L < 0.01) { g.visible = false; return; }
+    g.visible = true;
+    g.position.set(x, y, z);
+    g.rotation.set(0, 0, len >= 0 ? -Math.PI / 2 : Math.PI / 2);
+    const hl = Math.min(0.06, L * 0.5), sl = L - hl;
+    shaft.scale.set(thick, sl, thick); shaft.position.y = sl / 2;
+    head.scale.set(thick * 2.4, hl, thick * 2.4); head.position.y = sl + hl / 2;
+  };
+  g.setOpacity = (o) => { m.opacity = o; };
+  return g;
+}
+
+function makeLabel(color = '#ffffff', width = 0.55) {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 128;
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+  s.scale.set(width, width / 8, 1);
+  s.renderOrder = 10;
+  s.visible = false;
+  let last = null;
+  s.setText = (t, col) => {
+    const key = t + '|' + (col || color);
+    if (key === last) return;
+    last = key;
+    const g = c.getContext('2d');
+    g.clearRect(0, 0, 1024, 128);
+    if (!t) { s.visible = false; return; }
+    s.visible = true;
+    g.font = '600 64px Sarabun, sans-serif';
+    const tw = Math.min(1010, g.measureText(t).width + 56);
+    g.fillStyle = 'rgba(15,22,40,0.85)';
+    g.beginPath(); g.roundRect((1024 - tw) / 2, 12, tw, 104, 30); g.fill();
+    g.fillStyle = col || color; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(t, 512, 66);
+    tex.needsUpdate = true;
+  };
+  return s;
+}
+
+const loader = new GLTFLoader();
+function loadCar(url, length, fallbackColor) {
+  const holder = new THREE.Group();
+  holder.userData.wheels = [];
+  const fallback = () => {
+    const body = new THREE.Mesh(new THREE.BoxGeometry(length, length * 0.35, length * 0.45), mat(fallbackColor));
+    body.position.y = length * 0.25;
+    holder.add(body);
+  };
+  loader.load(url, (gltf) => {
+    const m = gltf.scene;
+    m.rotation.y = MODEL_YAW;
+    const size = new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3());
+    m.scale.setScalar(length / Math.max(size.x, size.z));
+    const b = new THREE.Box3().setFromObject(m);
+    const c = b.getCenter(new THREE.Vector3());
+    m.position.set(-c.x, -b.min.y, -c.z);
+    m.traverse((o) => {
+      if (/wheel/i.test(o.name) && !(o.parent && /wheel/i.test(o.parent.name))) holder.userData.wheels.push(o);
+    });
+    holder.add(m);
+  }, undefined, fallback);
+  return holder;
+}
+function spinWheels(car, amount) { for (const w of car.userData.wheels) w.rotation.x += amount; }
+
+// ---------- กราฟโมเมนตัม–เวลา ----------
+class Graph {
+  constructor(canvas, { tMax, pMax, pStep, fmt, maxSeries = 4, pMin = 0, tStep = 1, tFmt = String, yLabel = 'p (kg·m/s)', xLabel = 't (s)' }) {
+    Object.assign(this, { c: canvas, tMax, pMax, pMin, pStep, tStep, fmt, tFmt, maxSeries, yLabel, xLabel });
+    this.series = [];
+  }
+  add(color, label, fill) { const s = { color, label, fill, pts: [], tag: null }; this.series.push(s); if (this.series.length > this.maxSeries) this.series.shift(); return s; }
+  clear() { this.series = []; this.draw(); }
+  draw() {
+    const c = this.c, w = c.clientWidth, h = c.clientHeight;
+    if (!w) return;
+    const dpr = window.devicePixelRatio || 1;
+    if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+    const g = c.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    const L = 58, R = 12, T = 12, B = 26;
+    const X = (t) => L + (t / this.tMax) * (w - L - R);
+    const Y = (p) => h - B - ((p - this.pMin) / (this.pMax - this.pMin)) * (h - T - B);
+    g.font = '12px Sarabun, sans-serif';
+    g.strokeStyle = 'rgba(255,255,255,0.12)'; g.fillStyle = '#9fb4d8'; g.lineWidth = 1;
+    const p0 = Math.ceil(this.pMin / this.pStep - 1e-9) * this.pStep;
+    for (let p = p0; p <= this.pMax + 1e-9; p += this.pStep) {
+      g.beginPath(); g.moveTo(L, Y(p)); g.lineTo(w - R, Y(p)); g.stroke();
+      g.textAlign = 'right'; g.textBaseline = 'middle'; g.fillText(this.fmt(Math.abs(p) < 1e-9 ? 0 : p), L - 6, Y(p));
+    }
+    for (let t = 0; t <= this.tMax + 1e-9; t += this.tStep) {
+      g.textAlign = 'center'; g.textBaseline = 'top'; g.fillText(this.tFmt(t), X(t), h - B + 6);
+    }
+    g.textAlign = 'left'; g.textBaseline = 'top'; g.fillText(this.yLabel, L + 4, T);
+    g.textAlign = 'right'; g.textBaseline = 'bottom'; g.fillText(this.xLabel, w - R, h - B - 2);
+    g.strokeStyle = '#ffffff'; g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(L, T); g.lineTo(L, h - B); g.lineTo(w - R, h - B); g.stroke();
+    if (this.pMin < 0) { g.strokeStyle = 'rgba(255,255,255,0.5)'; g.beginPath(); g.moveTo(L, Y(0)); g.lineTo(w - R, Y(0)); g.stroke(); }
+    if (this.hline) {
+      const yy = Y(this.hline.v);
+      g.save(); g.setLineDash([6, 4]); g.strokeStyle = this.hline.color; g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(L, yy); g.lineTo(w - R, yy); g.stroke(); g.restore();
+      g.fillStyle = this.hline.color; g.font = '600 12px Sarabun, sans-serif'; g.textAlign = 'right'; g.textBaseline = 'bottom';
+      g.fillText(this.hline.text, w - R - 2, yy - 2);
+    }
+    for (const s of this.series) {
+      if (s.fill && s.pts.length > 1) {
+        g.fillStyle = s.fill;
+        g.beginPath(); g.moveTo(X(s.pts[0][0]), Y(0));
+        for (const [t, p] of s.pts) g.lineTo(X(t), Y(p));
+        g.lineTo(X(s.pts[s.pts.length - 1][0]), Y(0)); g.closePath(); g.fill();
+      }
+    }
+    for (const s of this.series) {
+      if (s.pts.length < 2) continue;
+      g.strokeStyle = s.color; g.lineWidth = 3; g.lineJoin = 'round';
+      g.beginPath();
+      s.pts.forEach(([t, p], i) => (i ? g.lineTo(X(t), Y(p)) : g.moveTo(X(t), Y(p))));
+      g.stroke();
+      if (s.tag) {
+        g.fillStyle = s.color; g.font = '600 13px Sarabun, sans-serif';
+        g.textAlign = 'right'; g.textBaseline = 'bottom';
+        if (X(s.tag.t) - L < 130) { g.textAlign = 'left'; g.fillText(s.tag.text, X(s.tag.t) + 6, Y(s.tag.p) - 4); } else g.fillText(s.tag.text, X(s.tag.t) - 4, Y(s.tag.p) - 4);
+        g.font = '12px Sarabun, sans-serif';
+      }
+    }
+  }
+}
+
+// ---------- เสียงประกอบ (สังเคราะห์ ไม่ต้องใช้ไฟล์เสียง) ----------
+const Sound = {
+  ctx: null, on: true,
+  init() { try { this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)(); this.ctx.resume(); } catch (e) {} },
+  tone(freq, dur, type = 'sine', vol = 0.2, delay = 0, slideTo = 0) {
+    if (!this.on || !this.ctx) return;
+    const c = this.ctx, t = c.currentTime + delay, o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + 0.02);
+  },
+  noise(dur, vol, freq, freqEnd, q = 1) {
+    if (!this.on || !this.ctx) return;
+    const c = this.ctx, t = c.currentTime, len = Math.floor(c.sampleRate * dur);
+    const buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    src.buffer = buf; f.type = 'bandpass'; f.Q.value = q;
+    f.frequency.setValueAtTime(freq, t); f.frequency.exponentialRampToValueAtTime(freqEnd || freq, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f).connect(g).connect(c.destination); src.start(t);
+  },
+  whoosh(dur) { this.noise(dur, 0.35, 1800, 500, 0.8); },
+  thud(hard) { if (hard) { this.tone(140, 0.12, 'triangle', 0.5, 0, 60); this.noise(0.05, 0.4, 3000); } else this.noise(0.3, 0.35, 300, 120, 0.7); },
+  ding() { this.tone(880, 0.18, 'sine', 0.25); this.tone(1320, 0.3, 'sine', 0.2, 0.1); },
+  buzz() { this.tone(180, 0.3, 'sawtooth', 0.12, 0, 120); },
+  fanfare() { [523, 659, 784, 1047].forEach((f, i) => this.tone(f, i === 3 ? 0.6 : 0.18, 'triangle', 0.25, i * 0.13)); },
+  vroom(dur) { this.tone(70, dur, 'sawtooth', 0.08, 0, 160); },
+};
+
+// ---------- พลุกระดาษ ----------
+function confetti() {
+  const c = $('confetti'), g = c.getContext('2d');
+  c.width = innerWidth; c.height = innerHeight;
+  const colors = ['#33d9ff', '#ffd91a', '#ff7326', '#4ade80', '#ff6fa8', '#ffffff'];
+  const ps = Array.from({ length: 160 }, () => ({ x: c.width / 2, y: c.height * 0.45, vx: (Math.random() - 0.5) * 14,
+    vy: -Math.random() * 16 - 4, r: Math.random() * 6 + 4, a: Math.random() * 6, va: (Math.random() - 0.5) * 0.4, col: colors[Math.floor(Math.random() * colors.length)] }));
+  const t0 = performance.now();
+  (function frame(now) {
+    g.clearRect(0, 0, c.width, c.height);
+    for (const p of ps) { p.vy += 0.45; p.x += p.vx; p.y += p.vy; p.a += p.va;
+      g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.fillStyle = p.col; g.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); g.restore(); }
+    if (now - t0 < 3200) requestAnimationFrame(frame); else g.clearRect(0, 0, c.width, c.height);
+  })(t0);
+}
+
+// ---------- สโลว์โมชัน ----------
+let timeScale = 1;
+$('slowBtn').onclick = () => {
+  timeScale = timeScale === 1 ? 0.25 : 1;
+  $('slowBtn').classList.toggle('on', timeScale !== 1);
+  $('slowBtn').textContent = timeScale === 1 ? '🐢 ช้า' : '🐢 ช้า 4 เท่า';
+};
+$('soundBtn').onclick = () => { Sound.on = !Sound.on; $('soundBtn').textContent = Sound.on ? '🔊' : '🔇'; };
+
+// ---------- ตัวช่วยเพิ่มเติมสำหรับแผนที่ 2 ----------
+const G = 9.8, EGG_M = 0.06, BREAK_F = 30;   // แรงดลเฉลี่ยที่ไข่เริ่มแตก (ค่าประมาณสำหรับการจำลอง)
+const sgn = (x, d = 2) => (x > 0.0001 ? '+' : x < -0.0001 ? '−' : '') + Math.abs(x).toFixed(d);
+
+function makeEgg(s = 1) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 20), mat(0xf3dcb4, { roughness: 0.45 }));
+  m.scale.set(0.045 * s, 0.06 * s, 0.045 * s);
+  return m;
+}
+
+// ไข่แตก: เปลือกกระจาย + ไข่แดงไหลเป็นวง
+function makeSplat(root) {
+  const g = new THREE.Group(); root.add(g); g.visible = false;
+  const shellMat = mat(0xf3dcb4, { roughness: 0.5 });
+  const frags = [];
+  for (let i = 0; i < 18; i++) {
+    const f = new THREE.Mesh(new THREE.TetrahedronGeometry(0.012 + Math.random() * 0.012), shellMat);
+    g.add(f); frags.push({ m: f, v: new THREE.Vector3(), w: new THREE.Vector3() });
+  }
+  const white = new THREE.Mesh(new THREE.CircleGeometry(1, 32), new THREE.MeshStandardMaterial({ color: 0xfff8e6, transparent: true, opacity: 0.85, roughness: 0.2 }));
+  const yolk = new THREE.Mesh(new THREE.CircleGeometry(1, 32), mat(0xffb703, { roughness: 0.25 }));
+  white.rotation.x = yolk.rotation.x = -Math.PI / 2;
+  g.add(white, yolk);
+  let t = 0, floorY = 0;
+  return {
+    burst(pos, s = 1) {
+      g.visible = true; t = 0; floorY = pos.y - 0.055 * s;
+      for (const f of frags) {
+        f.m.position.copy(pos);
+        const a = Math.random() * Math.PI * 2, sp = 0.4 + Math.random() * 0.6;
+        f.v.set(Math.cos(a) * sp * s, (0.5 + Math.random() * 0.7) * s, Math.sin(a) * sp * s);
+        f.w.set(Math.random() * 12, Math.random() * 12, Math.random() * 12);
+      }
+      white.position.set(pos.x, floorY + 0.002, pos.z); yolk.position.set(pos.x, floorY + 0.004, pos.z);
+      white.scale.setScalar(0.001); yolk.scale.setScalar(0.001);
+      this.s = s;
+    },
+    hide() { g.visible = false; },
+    update(dt) {
+      if (!g.visible) return;
+      t += dt;
+      for (const f of frags) {
+        if (f.m.position.y > floorY + 0.005 || f.v.y > 0) {
+          f.v.y -= 3 * dt; f.m.position.addScaledVector(f.v, dt);
+          f.m.rotation.x += f.w.x * dt; f.m.rotation.y += f.w.y * dt;
+        } else f.m.position.y = floorY + 0.005;
+      }
+      const k = Math.min(1, t / 0.6);
+      white.scale.setScalar(Math.max(0.001, 0.13 * this.s * Math.sqrt(k)));
+      yolk.scale.setScalar(Math.max(0.001, 0.05 * this.s * Math.sqrt(k)));
+    },
+  };
+}
+
+// แท่งความสูง (ไม้บรรทัด) พร้อมป้าย
+function makePole(root, x, z, h, label) {
+  const pole = new THREE.Mesh(new THREE.BoxGeometry(0.012, h, 0.012), mat(0xdddddd));
+  pole.position.set(x, h / 2, z); root.add(pole);
+  const top = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.008, 0.012), mat(0xffd91a));
+  top.position.set(x, h, z); root.add(top);
+  const lab = makeLabel('#ffd91a', 0.32); lab.position.set(x, h + 0.05, z); lab.setText(label); root.add(lab);
+  return { pole, top, lab };
+}
+
+// ---------- AR-1 Momentum Collision Lab ----------
+function buildAR1(root) {
+  const S = { mode: 'stick', m1: 1, u1: 2, m2: 1, u2: 0, J: 1.5, phase: 'idle', x1: -0.75, x2: 0, v1: 0, v2: 0, t: 0, rows: [], after: null };
+  const L = 0.22, VS = 0.15;   // ความยาวรถ (หน่วยฉาก), สเกลความเร็ว
+
+  const track = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.02, 0.32), mat(0x3a4150));
+  track.position.y = 0.01; root.add(track);
+  for (const z of [-0.1, 0.1]) { const r = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.012, 0.012), mat(0xb0b8c8)); r.position.set(0, 0.026, z); root.add(r); }
+
+  function makeCart(color) {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(L, 0.06, 0.16), mat(color, { roughness: 0.4 }));
+    body.position.y = 0.06; g.add(body);
+    for (const x of [-0.07, 0.07]) for (const z of [-0.085, 0.085]) {
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.015, 16), mat(0x222222));
+      w.rotation.x = Math.PI / 2; w.position.set(x, 0.03, z); g.add(w);
+    }
+    const weights = new THREE.Group(); g.add(weights);
+    g.userData.setMass = (m) => {
+      weights.clear();
+      const n = Math.round(m / 0.5);
+      for (let i = 0; i < n; i++) {
+        const b = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.022, 0.1), mat(0x6c757d, { metalness: 0.5, roughness: 0.3 }));
+        b.position.set(0, 0.1 + i * 0.025, 0); weights.add(b);
+      }
+      g.userData.h = 0.1 + n * 0.025;
+    };
+    root.add(g); return g;
+  }
+  const c1 = makeCart(0x2f6fe0), c2 = makeCart(0xe76f51);
+  const velcro = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.05, 0.12), mat(0xff6fa8)); root.add(velcro);
+  const spring = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1, 12, 1, true), new THREE.MeshStandardMaterial({ color: 0xcfd8dc, wireframe: true }));
+  spring.rotation.z = Math.PI / 2; root.add(spring);
+  const a1 = makeArrow(0x33d9ff), a2 = makeArrow(0xffa94d), aT = makeArrow(0xc77dff);
+  const l1 = makeLabel('#33d9ff', 0.6), l2 = makeLabel('#ffa94d', 0.6), lT = makeLabel('#c77dff', 0.75), lHit = makeLabel('#ffd91a', 0.4);
+  root.add(a1, a2, aT, l1, l2, lT, lHit);
+  const sparks = [];
+  for (let i = 0; i < 24; i++) { const s = new THREE.Mesh(new THREE.SphereGeometry(0.008, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffd91a })); s.visible = false; root.add(s); sparks.push({ m: s, v: new THREE.Vector3(), life: 0 }); }
+  let hitTimer = 0;
+
+  function drawBars(before, after) {
+    const c = $('c1Bars'), w = c.clientWidth, h = c.clientHeight; if (!w) return;
+    const dpr = window.devicePixelRatio || 1;
+    if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+    const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+    const mid = w * 0.55, sc = (w * 0.4) / 9;   // 9 kg·m/s เต็มครึ่งแถบ
+    g.strokeStyle = 'rgba(255,255,255,0.6)'; g.beginPath(); g.moveTo(mid, 6); g.lineTo(mid, h - 6); g.stroke();
+    g.font = '13px Sarabun, sans-serif'; g.textBaseline = 'middle';
+    const row = (y, label, p) => {
+      g.fillStyle = '#9fb4d8'; g.textAlign = 'left'; g.fillText(label, 4, y + 14);
+      if (!p) { g.fillStyle = '#9fb4d8'; g.fillText('—', mid + 6, y + 14); return; }
+      let x = mid;
+      [[p[0], '#33d9ff'], [p[1], '#ffa94d']].forEach(([v, col]) => {
+        g.fillStyle = col; const len = v * sc; g.fillRect(Math.min(x, x + len), y + 4, Math.abs(len), 20); x += len;
+      });
+      const tot = p[0] + p[1];
+      g.fillStyle = '#c77dff'; g.fillRect(Math.min(mid, mid + tot * sc), y + 27, Math.abs(tot * sc), 6);
+      g.fillStyle = '#ffffff'; g.textAlign = 'right'; g.fillText('Σp = ' + sgn(tot), w - 4, y + 14);
+    };
+    row(8, 'ก่อนชน', before); row(64, 'หลังชน', after);
+  }
+
+  const tabs = document.querySelectorAll('#s1 .tabs button');
+  tabs.forEach((b) => b.onclick = () => { if (S.phase === 'run') return; S.mode = b.dataset.mode; tabs.forEach((x) => x.classList.toggle('on', x === b)); reset(); });
+  for (const [id, key] of [['m1', 'm1'], ['u1', 'u1'], ['m2', 'm2'], ['u2', 'u2'], ['jS', 'J']]) {
+    $(id).oninput = (e) => { if (S.phase === 'run') { e.target.value = S[key]; return; } S[key] = +e.target.value; reset(); };
+  }
+  $('c1Go').onclick = go;
+  $('c1Clr').onclick = () => { if (S.phase === 'run') return; S.rows = []; refreshTable(); reset(); };
+
+  function before() { return S.mode === 'spring' ? [0, 0] : [S.m1 * S.u1, S.m2 * S.u2]; }
+  function reset() {
+    S.phase = 'idle'; S.t = 0; S.after = null; S.collided = false;
+    if (S.mode === 'spring') { S.x1 = -0.15; S.x2 = 0.15; S.v1 = 0; S.v2 = 0; }
+    else { S.x1 = -0.75; S.x2 = 0.0; S.v1 = S.u1; S.v2 = S.u2; }
+    c1.userData.setMass(S.m1); c2.userData.setMass(S.m2);
+    $('u1Row').style.display = $('u2Row').style.display = S.mode === 'spring' ? 'none' : '';
+    $('jRow').style.display = S.mode === 'spring' ? '' : 'none';
+    $('m1Lab').textContent = `รถคันที่ 1 (สีฟ้า)  m₁ = ${S.m1.toFixed(1)} kg`;
+    $('u1Lab').textContent = `ความเร็วก่อนชน  u₁ = ${sgn(S.u1, 1)} m/s`;
+    $('m2Lab').textContent = `รถคันที่ 2 (สีส้ม)  m₂ = ${S.m2.toFixed(1)} kg`;
+    $('u2Lab').textContent = `ความเร็วก่อนชน  u₂ = ${sgn(S.u2, 1)} m/s  (ค่าลบ = วิ่งเข้าหาทางซ้าย)`;
+    $('jLab').textContent = `ความแรงสปริง (การดลที่สปริงให้รถแต่ละคัน)  J = ${S.J.toFixed(1)} N·s`;
+    $('c1Msg').textContent = '';
+    info(); drawBars(before(), null);
+  }
+  function info() {
+    const b = before(), sb = b[0] + b[1];
+    let s = '<span style="color:#ffd91a">กฎการอนุรักษ์โมเมนตัม  m₁u₁ + m₂u₂ = m₁v₁ + m₂v₂  (ไม่มีแรงภายนอกลัพธ์)</span><br>';
+    if (S.mode === 'spring') s += `ก่อนดีดตัว รถทั้งสองหยุดนิ่ง  Σp ก่อน = 0<br>`;
+    else s += `Σp ก่อน = (${S.m1.toFixed(1)})(${sgn(S.u1, 1)}) + (${S.m2.toFixed(1)})(${sgn(S.u2, 1)}) = <b>${sgn(sb)}</b> kg·m/s<br>`;
+    if (S.after) {
+      const [v1, v2] = S.after, sa = S.m1 * v1 + S.m2 * v2;
+      s += `Σp หลัง = (${S.m1.toFixed(1)})(${sgn(v1)}) + (${S.m2.toFixed(1)})(${sgn(v2)}) = <b>${sgn(sa)}</b> kg·m/s<br>`;
+      const d1 = S.m1 * v1 - b[0], d2 = S.m2 * v2 - b[1];
+      s += `Δp₁ = ${sgn(d1)}   Δp₂ = ${sgn(d2)}  →  Δp₁ = −Δp₂`;
+    } else s += S.mode === 'spring' ? 'กด “เริ่มชน!” เพื่อปล่อยสปริง' : 'กด “เริ่มชน!” แล้วสังเกตลูกศรสีม่วง (โมเมนตัมรวม)';
+    $('c1Info').innerHTML = s;
+  }
+  function go() {
+    if (S.phase === 'run') return;
+    reset();
+    if (S.mode !== 'spring' && S.u1 <= S.u2) { $('c1Msg').innerHTML = '<span class="bad">รถคันที่ 1 ต้องเร็วกว่ารถคันที่ 2 จึงจะไล่ชนกันได้ ลองเพิ่ม u₁ หรือให้ u₂ ติดลบ</span>'; return; }
+    S.phase = 'run';
+    if (S.mode === 'spring') { S.springT = 0; Sound.tone(520, 0.15, 'square', 0.15, 0, 900); }
+  }
+  function collide() {
+    const { m1, m2 } = S, u1 = S.v1, u2 = S.v2;
+    let v1, v2;
+    if (S.mode === 'stick') v1 = v2 = (m1 * u1 + m2 * u2) / (m1 + m2);
+    else { v1 = ((m1 - m2) * u1 + 2 * m2 * u2) / (m1 + m2); v2 = ((m2 - m1) * u2 + 2 * m1 * u1) / (m1 + m2); }
+    S.v1 = v1; S.v2 = v2; S.after = [v1, v2]; S.collided = true;
+    burst((S.x1 + S.x2) / 2);
+    Sound.thud(true);
+    finishInfo();
+  }
+  function burst(x) {
+    hitTimer = 0.8;
+    for (const s of sparks) { s.m.visible = true; s.m.position.set(x, 0.08, 0); const a = Math.random() * Math.PI * 2; s.v.set(Math.cos(a) * 0.3 * Math.random(), 0.3 + Math.random() * 0.5, Math.sin(a) * 0.3); s.life = 0.6; }
+  }
+  function finishInfo() {
+    info();
+    const b = before(), sb = b[0] + b[1], sa = S.m1 * S.after[0] + S.m2 * S.after[1];
+    drawBars(b, [S.m1 * S.after[0], S.m2 * S.after[1]]);
+    $('c1Msg').textContent = Math.abs(sb - sa) < 0.01 ? 'โมเมนตัมรวมก่อนชน = หลังชน (อนุรักษ์โมเมนตัม) รถคันหนึ่งได้โมเมนตัมเพิ่มเท่าไร อีกคันเสียไปเท่านั้น' : '';
+    const names = { stick: 'ติดกันไป', bounce: 'แยกกัน', spring: 'ดีดตัว' };
+    S.rows.push({ mode: names[S.mode], m1: S.m1, u1: S.mode === 'spring' ? 0 : S.u1, m2: S.m2, u2: S.mode === 'spring' ? 0 : S.u2, sb, v1: S.after[0], v2: S.after[1], sa });
+    if (S.rows.length > 4) S.rows.shift();
+    refreshTable();
+  }
+  function refreshTable() {
+    $('c1Table').innerHTML = '<tr><th>แบบ</th><th>m₁</th><th>u₁</th><th>m₂</th><th>u₂</th><th>Σp ก่อน</th><th>v₁</th><th>v₂</th><th>Σp หลัง</th></tr>' +
+      (S.rows.length ? S.rows.map((r) => `<tr><td>${r.mode}</td><td>${r.m1.toFixed(1)}</td><td>${sgn(r.u1, 1)}</td><td>${r.m2.toFixed(1)}</td><td>${sgn(r.u2, 1)}</td><td>${sgn(r.sb)}</td><td>${sgn(r.v1)}</td><td>${sgn(r.v2)}</td><td class="good">${sgn(r.sa)}</td></tr>`).join('')
+        : '<tr><td colspan="9" class="muted">ยังไม่มีผล (m หน่วย kg, u และ v หน่วย m/s, p หน่วย kg·m/s)</td></tr>');
+  }
+
+  function update(dt) {
+    if (S.phase === 'run') {
+      S.t += dt;
+      if (S.mode === 'spring' && !S.collided) {
+        S.springT += dt;
+        if (S.springT > 0.15) { S.v1 = -S.J / S.m1; S.v2 = S.J / S.m2; S.after = [S.v1, S.v2]; S.collided = true; burst(0); finishInfo(); }
+      }
+      S.x1 += S.v1 * VS * dt; S.x2 += S.v2 * VS * dt;
+      if (!S.collided && S.mode !== 'spring' && S.x2 - S.x1 <= L) { S.x1 = S.x2 - L; collide(); }
+      if (S.collided && S.mode === 'stick') S.x2 = S.x1 + L;
+      if (S.x1 < -1.15 || S.x2 > 1.15 || S.x1 > 1.15 || S.x2 < -1.15 || S.t > 14) S.phase = 'done';
+    }
+    const cx1 = Math.max(-1.15, Math.min(1.15, S.x1)), cx2 = Math.max(-1.15, Math.min(1.15, S.x2));
+    c1.position.x = cx1; c2.position.x = cx2;
+    velcro.visible = S.mode === 'stick'; velcro.position.set(cx1 + L / 2, 0.06, 0);
+    spring.visible = S.mode === 'spring' && !S.collided;
+    if (spring.visible) { const gap = cx2 - cx1 - L; spring.scale.y = Math.max(0.01, gap); spring.position.set((cx1 + cx2) / 2, 0.06, 0); }
+    const PS = 0.09;
+    const p1 = S.m1 * S.v1, p2 = S.m2 * S.v2;
+    a1.setTo(cx1, c1.userData.h + 0.06, 0, p1 * PS); a2.setTo(cx2, c2.userData.h + 0.06, 0, p2 * PS);
+    l1.position.set(cx1, c1.userData.h + 0.13, -0.05); l1.setText(`m₁=${S.m1.toFixed(1)}  v=${sgn(S.v1, 1)}  p=${sgn(p1, 1)}`);
+    l2.position.set(cx2, c2.userData.h + 0.2, 0.05); l2.setText(`m₂=${S.m2.toFixed(1)}  v=${sgn(S.v2, 1)}  p=${sgn(p2, 1)}`);
+    const tot = p1 + p2;
+    aT.setTo(0, 0.62, 0, tot * PS, 0.02); lT.position.set(0, 0.72, 0); lT.setText(`โมเมนตัมรวม Σp = ${sgn(tot)} kg·m/s`);
+    if (hitTimer > 0) { hitTimer -= dt; lHit.position.set((cx1 + cx2) / 2, 0.42, 0); lHit.setText(S.mode === 'spring' ? 'ปึ้ง!' : 'ชน!'); } else lHit.setText('');
+    for (const s of sparks) { if (s.life > 0) { s.life -= dt; s.v.y -= 1.5 * dt; s.m.position.addScaledVector(s.v, dt); s.m.visible = s.life > 0; } }
+  }
+
+  reset(); refreshTable();
+  return { update, onShow: () => drawBars(before(), S.after ? [S.m1 * S.after[0], S.m2 * S.after[1]] : null) };
+}
+
+// ---------- AR-2 ไข่ตก: พื้นแข็ง vs ฟองน้ำ ----------
+function buildAR2(root) {
+  const H = 0.9, DP = 0.38;   // 2 m ย่อเป็น 0.9 หน่วยฉาก, Δp ตามตัวอย่างในแผน
+  const cases = [
+    { name: 'พื้นแข็ง', x: -0.42, top: 0.04, dt: 0.002, col: '#ff4d4d', fill: 'rgba(255,77,77,0.35)', vis: 0.35 },
+    { name: 'ฟองน้ำ', x: 0.42, top: 0.12, dt: 0.05, col: '#4ade80', fill: 'rgba(74,222,128,0.35)', vis: 1.5 },
+  ];
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.04, 0.42), mat(0x8d99ae, { roughness: 0.9 }));
+  floor.position.set(cases[0].x, 0.02, 0); root.add(floor);
+  const sponge = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.12, 0.42), mat(0xffd166, { roughness: 1 }));
+  sponge.position.set(cases[1].x, 0.06, 0); root.add(sponge);
+  const scrub = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.03, 0.42), mat(0x2a9d8f)); root.add(scrub);
+  for (const c of cases) {
+    c.egg = makeEgg(1.1); root.add(c.egg);
+    c.splat = makeSplat(root);
+    makePole(root, c.x - 0.26, 0, c.top + H, 'สูง 2 m');
+    c.lab = makeLabel('#ffffff', 0.6); c.lab.position.set(c.x, c.top + H + 0.18, 0); root.add(c.lab);
+    c.res = makeLabel(c.col, 0.62); c.res.position.set(c.x, 0.42, 0.12); root.add(c.res);
+  }
+  const graph = new Graph($('e2Graph'), { tMax: 0.06, tStep: 0.01, tFmt: (t) => t.toFixed(2), pMax: 320, pStep: 80, fmt: N, yLabel: 'แรงดล F (N)', maxSeries: 2 });
+  let phase = 'idle', t = 0;
+
+  function reset() {
+    phase = 'idle'; t = 0;
+    for (const c of cases) {
+      c.egg.visible = true; c.egg.position.set(c.x, c.top + H + 0.066, 0); c.state = 'fall'; c.ct = 0; c.splat.hide();
+      c.lab.setText(`${c.name}  Δt = ${c.dt} s`); c.res.setText(''); c.series = null;
+    }
+    sponge.scale.y = 1; sponge.position.y = 0.06; scrub.position.set(cases[1].x, 0.135, 0); scrub.scale.y = 1;
+    info(false);
+  }
+  function info(done) {
+    let s = '<span style="color:#ffd91a">สูตร  v = √(2gh)   Δp = mv − mu   J = Δp = F·Δt   F = Δp / Δt</span><br>' +
+      'ไข่ m = 0.06 kg ตกจาก 2 m  v = √(2 × 9.8 × 2) ≈ 6.3 m/s  →  Δp ≈ 0.06 × 6.3 ≈ <b>0.38 kg·m/s</b> เท่ากันทั้ง 2 ฟอง<br>';
+    if (done) s += `พื้นแข็ง: F = 0.38 / 0.002 ≈ <b class="bad">190 N</b> ไข่แตก<br>ฟองน้ำ: F = 0.38 / 0.05 ≈ <b class="good">7.6 N</b> ไข่ไม่แตก`;
+    else s += 'กด “ปล่อยไข่ทั้ง 2 ฟอง!” ภาพจะช้าลงอัตโนมัติตอนไข่กระทบ';
+    $('e2Info').innerHTML = s;
+    $('e2Msg').textContent = done ? 'พื้นที่ใต้กราฟ (การดล) เท่ากัน แต่ยอดกราฟ (แรงดล) ต่างกันมาก ฟองน้ำยืดเวลาการชน 25 เท่า แรงดลจึงลดลง 25 เท่า' : '';
+    const r = (c, F, ok) => `<tr><td>${c.name}</td><td>0.38</td><td>${c.dt}</td><td>${F}</td><td class="${ok ? 'good' : 'bad'}">${done ? (ok ? 'ไม่แตก' : 'แตก') : ''}</td></tr>`;
+    $('e2Table').innerHTML = '<tr><th>พื้น</th><th>Δp (kg·m/s)</th><th>Δt (s)</th><th>F เฉลี่ย (N)</th><th>ผล</th></tr>' +
+      r(cases[0], done ? '190' : '', false) + r(cases[1], done ? '7.6' : '', true);
+  }
+  $('e2Go').onclick = () => { graph.clear(); reset(); phase = 'run'; Sound.tone(700, 0.6, 'sine', 0.08, 0, 300); };
+  $('e2Again').onclick = $('e2Go').onclick;
+
+  function update(dt) {
+    for (const c of cases) c.splat.update(dt);
+    if (phase !== 'run') return;
+    t += dt;
+    let allDone = true;
+    for (const c of cases) {
+      if (c.state === 'fall') {
+        allDone = false;
+        const y0 = c.top + H + 0.066, k = Math.min(1, t / 1.0);
+        c.egg.position.y = y0 - H * k * k;
+        if (k >= 1) { c.state = 'hit'; c.ct = 0; c.series = graph.add(c.col, '', c.fill); if (c.dt < 0.01) { c.egg.visible = false; c.splat.burst(c.egg.position.clone(), 1.1); Sound.thud(true); } else Sound.thud(false); }
+      } else if (c.state === 'hit') {
+        allDone = false;
+        c.ct += dt;
+        const s = Math.min(1, c.ct / c.vis), Fpk = (DP / c.dt) * Math.PI / 2;
+        c.series.pts.push([s * c.dt, Fpk * Math.sin(Math.PI * s)]);
+        if (c.dt >= 0.01) {
+          const sq = 0.07 * Math.sin(Math.PI * Math.min(s * 1.6, 0.5) * 1);   // ยุบลงแล้วค้างไว้
+          sponge.scale.y = (0.12 - sq) / 0.12; sponge.position.y = (0.12 - sq) / 2;
+          scrub.position.y = 0.12 - sq + 0.015;
+          c.egg.position.y = 0.12 - sq + 0.03 + 0.066;
+        }
+        graph.draw();
+        if (s >= 1) {
+          c.state = 'done';
+          c.series.pts.push([c.dt, 0]);
+          c.series.tag = { t: c.dt, p: c.dt < 0.01 ? 250 : 30, text: `${c.name}: F เฉลี่ย ≈ ${c.dt < 0.01 ? '190' : '7.6'} N` };
+          c.res.setText(c.dt < 0.01 ? 'F ≈ 190 N  ไข่แตก!' : 'F ≈ 7.6 N  ไข่ไม่แตก');
+          graph.draw();
+        }
+      }
+    }
+    // สโลว์โมชันอัตโนมัติขณะกระทบ
+    if (allDone) { phase = 'done'; info(true); }
+  }
+  // ช่วงกระทบให้เวลาช้าลง
+  const upd = update;
+  function slowUpdate(dt) { const hitting = cases.some((c) => c.state === 'hit'); upd(hitting ? dt * 0.5 : dt); }
+  reset();
+  return { update: slowUpdate, onShow: () => graph.draw() };
+}
+
+// ---------- AR-4 Egg Drop Lab ----------
+function buildAR4(root) {
+  // ราคาและหน่วยตามตารางวัสดุเสริมในแผน (ความหนา/การยุบตัว/มวล เป็นค่าประมาณสำหรับการจำลอง)
+  const MATS = [
+    { id: 'none', name: 'ไม่ใช้วัสดุ', unit: '', price: 0, mass: 0, thick: 0, squish: 0, color: 0x999999 },
+    { id: 'paper', name: 'กระดาษ A4 ขยำ', unit: 'แผ่น', price: 0, mass: 5, thick: 1.5, squish: 0.5, color: 0xf8f9fa },
+    { id: 'box', name: 'กระดาษลัง A4', unit: 'แผ่น', price: 3, mass: 20, thick: 0.5, squish: 0.4, color: 0xc8a37b },
+    { id: 'sponge', name: 'ฟองน้ำล้างจาน', unit: 'ก้อน', price: 5, mass: 6, thick: 2.5, squish: 0.75, color: 0xffd166 },
+    { id: 'balloon', name: 'ลูกโป่ง', unit: 'ลูก', price: 3, mass: 3, thick: 6, squish: 0.8, color: 0xef476f },
+    { id: 'straw', name: 'หลอดดูดน้ำ', unit: 'ชุด 5 หลอด', price: 2, mass: 4, thick: 1.5, squish: 0.65, color: 0x06d6a0 },
+    { id: 'cup', name: 'แก้วกระดาษ', unit: 'ใบ', price: 2, mass: 5, thick: 8, squish: 0.45, color: 0xe9ecef },
+    { id: 'bag', name: 'ถุงพลาสติกเป่าลม', unit: 'ใบ', price: 1, mass: 2, thick: 4, squish: 0.75, color: 0x90e0ef },
+  ];
+  const S = { mat: MATS[3], layers: 2, h: 2, phase: 'idle', t: 0, ct: 0, slow: false, rows: [], last: null };
+  const SC = 0.012;   // 1 cm = 0.012 หน่วยฉาก (ขยายวัสดุให้เห็นชัด)
+  const table = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.02, 0.7), mat(0x6d597a, { roughness: 0.9 }));
+  table.position.y = 0.01; root.add(table);
+  const stack = new THREE.Group(); root.add(stack);
+  const egg = makeEgg(1.2); root.add(egg);
+  const splat = makeSplat(root);
+  const poleG = new THREE.Group(); root.add(poleG);
+  const res = makeLabel('#ffffff', 0.7); res.position.set(0, 0.55, 0.15); root.add(res);
+  const graph = new Graph($('d4Graph'), { tMax: 0.05, tStep: 0.01, tFmt: (t) => t.toFixed(2), pMax: 200, pStep: 50, fmt: N, yLabel: 'แรงดล F (N)', maxSeries: 3 });
+  graph.hline = { v: BREAK_F, color: '#ff4d4d', text: `ไข่แตกเมื่อ F > ${BREAK_F} N` };
+  const colors = ['#ffd91a', '#33d9ff', '#ff7326', '#4ade80', '#c77dff'];
+
+  $('matRow').innerHTML = MATS.map((m, i) => `<button class="chip${m === S.mat ? ' on' : ''}" data-i="${i}">${m.name}${m.price ? ` (${m.price} บาท/${m.unit})` : m.id === 'paper' ? ' (ฟรี)' : ''}</button>`).join('');
+  $('matRow').querySelectorAll('button').forEach((b) => b.onclick = () => { if (S.phase === 'run') return; S.mat = MATS[+b.dataset.i]; refresh(); });
+  $('lay').oninput = (e) => { if (S.phase === 'run') { e.target.value = S.layers; return; } S.layers = +e.target.value; refresh(); };
+  document.querySelectorAll('#hRow button').forEach((b) => b.onclick = () => { if (S.phase === 'run') return; S.h = +b.dataset.h; refresh(); });
+  $('d4Go').onclick = () => drop(false);
+  $('d4Slow').onclick = () => { if (S.last) drop(true); };
+  $('d4Clr').onclick = () => { if (S.phase === 'run') return; S.rows = []; S.last = null; graph.clear(); refreshTable(); refresh(); };
+
+  function calc() {
+    const m = S.mat, n = m.id === 'none' ? 0 : S.layers;
+    const d = n * m.thick * m.squish / 100;          // ระยะยุบตัว (m)
+    const v = Math.sqrt(2 * G * S.h), dp = EGG_M * v;
+    const dt = Math.max(0.002, d > 0 ? 2 * d / v : 0.002);
+    const F = dp / dt;
+    const size = 5.7 + n * m.thick + 1;               // ไข่สูง 5.7 cm + วัสดุรองด้านล่าง + เปลือกห่อด้านบน 1 cm
+    return { n, d, v, dp, dt, F, cost: n * m.price, mass: n * m.mass, size, broke: F > BREAK_F };
+  }
+  function buildStack() {
+    stack.clear();
+    const c = calc(); let y = 0.02;
+    const h = Math.max(0.006, S.mat.thick * SC);
+    for (let i = 0; i < c.n; i++) {
+      let geo;
+      if (S.mat.id === 'balloon' || S.mat.id === 'bag') geo = new THREE.SphereGeometry(0.5, 20, 14);
+      else if (S.mat.id === 'cup') geo = new THREE.CylinderGeometry(0.5, 0.36, 1, 20);
+      else geo = new THREE.BoxGeometry(1, 1, 1);
+      const b = new THREE.Mesh(geo, mat(S.mat.color, { roughness: 0.9, transparent: S.mat.id === 'bag', opacity: 0.7 }));
+      b.scale.set(0.2, h, 0.2); b.position.y = y + h / 2; stack.add(b); y += h;
+    }
+    stack.userData.top = y; stack.userData.h0 = y - 0.02;
+    return y;
+  }
+  function refresh() {
+    $('matRow').querySelectorAll('button').forEach((b) => b.classList.toggle('on', MATS[+b.dataset.i] === S.mat));
+    document.querySelectorAll('#hRow button').forEach((b) => b.classList.toggle('on', +b.dataset.h === S.h));
+    $('lay').disabled = S.mat.id === 'none';
+    $('layLab').textContent = S.mat.id === 'none' ? 'จำนวนชั้น: ไม่มีวัสดุรองรับ' : `จำนวน${S.mat.name}  ${S.layers} ${S.mat.unit}`;
+    const c = calc();
+    let s = `ต้นทุน <b>${c.cost} บาท</b>   มวลอุปกรณ์ <b>${c.mass} g</b>   ขนาดรวมประมาณ ${c.size.toFixed(1)} cm   ระยะยุบตัว ${(c.d * 100).toFixed(1)} cm`;
+    const warn = [];
+    if (c.mass > 100) warn.push('มวลเกิน 100 g');
+    if (c.size > 15) warn.push('ขนาดเกิน 15 cm');
+    if (warn.length) s += `<br><span class="bad">ไม่ผ่านเกณฑ์: ${warn.join(', ')}</span>`;
+    $('d4Set').innerHTML = s;
+    const top = buildStack();
+    poleG.clear();
+    const H = S.h * 0.3;
+    const p = makePole(poleG, -0.3, 0, top + H, `สูง ${S.h} m`);
+    if (S.phase !== 'run') { egg.visible = true; egg.position.set(0, top + H + 0.072, 0); splat.hide(); res.setText(''); }
+  }
+  function drop(slow) {
+    if (S.phase === 'run') return;
+    refresh();
+    S.phase = 'run'; S.t = 0; S.ct = 0; S.slow = slow; S.c = calc(); S.state = 'fall';
+    S.series = graph.add(colors[(S.rows.length) % colors.length], '', S.c.broke ? 'rgba(255,77,77,0.25)' : 'rgba(74,222,128,0.25)');
+    $('d4Info').innerHTML = slow ? 'ดูซ้ำแบบสโลว์โมชัน...' : 'ไข่กำลังตก...';
+    Sound.tone(700, 0.6, 'sine', 0.08, 0, 300);
+  }
+  function finish() {
+    const c = S.c;
+    S.phase = 'idle';
+    S.series.pts.push([c.dt, 0]);
+    S.series.tag = { t: Math.min(c.dt, 0.048), p: Math.min(c.F, 150), text: `F ≈ ${c.F.toFixed(1)} N` };
+    graph.draw();
+    res.setText(c.broke ? `F ≈ ${c.F.toFixed(1)} N  ไข่แตก!` : `F ≈ ${c.F.toFixed(1)} N  ไข่รอด!`);
+    if (!c.broke) { Sound.fanfare(); confetti(); }
+    $('d4Info').innerHTML = `<span style="color:#ffd91a">สูตร  v = √(2gh)   Δp = mv   Δt ≈ 2d / v   F = Δp / Δt</span><br>` +
+      `v = √(2 × 9.8 × ${S.h}) = ${c.v.toFixed(2)} m/s   Δp = 0.06 × ${c.v.toFixed(2)} = ${c.dp.toFixed(3)} kg·m/s<br>` +
+      `วัสดุยุบตัว d = ${(c.d * 100).toFixed(1)} cm  →  Δt ≈ ${c.dt.toFixed(4)} s<br>` +
+      `<b>F = ${c.dp.toFixed(3)} / ${c.dt.toFixed(4)} ≈ ${c.F.toFixed(1)} N</b>  ` + (c.broke ? `<span class="bad">เกิน ${BREAK_F} N ไข่แตก ลองเพิ่มชั้นหรือใช้วัสดุที่ยุบตัวได้มาก</span>` : `<span class="good">ไม่เกิน ${BREAK_F} N ไข่รอด</span>`);
+    if (!S.slow) {
+      S.rows.push({ mat: S.mat.id === 'none' ? 'ไม่มี' : `${S.mat.name} × ${c.n}`, h: S.h, dt: c.dt, F: c.F, cost: c.cost, mass: c.mass, ok: !c.broke });
+      if (S.rows.length > 5) S.rows.shift();
+      refreshTable();
+    }
+    S.last = true;
+  }
+  function refreshTable() {
+    $('d4Table').innerHTML = '<tr><th>วัสดุ</th><th>h (m)</th><th>Δt (s)</th><th>F (N)</th><th>ต้นทุน (บาท)</th><th>มวล (g)</th><th>ผล</th></tr>' +
+      (S.rows.length ? S.rows.map((r) => `<tr><td>${r.mat}</td><td>${r.h}</td><td>${r.dt.toFixed(4)}</td><td>${r.F.toFixed(1)}</td><td>${r.cost}</td><td>${r.mass}</td><td class="${r.ok ? 'good' : 'bad'}">${r.ok ? 'ไม่แตก' : 'แตก'}</td></tr>`).join('')
+        : '<tr><td colspan="7" class="muted">ยังไม่มีผล</td></tr>');
+  }
+
+  function update(dt) {
+    splat.update(dt);
+    if (S.phase !== 'run') return;
+    const c = S.c, top = stack.userData.top, H = S.h * 0.3;
+    if (S.state === 'fall') {
+      S.t += dt * (S.slow ? 0.5 : 1);
+      const T = 0.55 + 0.15 * S.h, k = Math.min(1, S.t / T);
+      egg.position.y = top + H + 0.072 - H * k * k;
+      if (k >= 1) {
+        S.state = 'hit'; S.ct = 0;
+        if (c.broke) Sound.thud(true); else Sound.thud(false);
+      }
+    } else {
+      const vis = (c.broke ? 0.35 : 1.1) * (S.slow ? 4 : 1);
+      S.ct += dt; const s = Math.min(1, S.ct / vis);
+      const Fpk = c.F * Math.PI / 2;
+      S.series.pts.push([s * c.dt, Math.min(Fpk * Math.sin(Math.PI * s), 400)]);
+      graph.draw();
+      // วัสดุยุบตัว
+      const comp = c.d * SC * 100 * Math.sin(Math.PI * Math.min(s, 0.5));
+      const h0 = stack.userData.h0;
+      if (h0 > 0) { const f = Math.max(0.2, (h0 - comp) / h0); stack.scale.y = f; stack.position.y = 0.02 * (1 - f); }
+      egg.position.y = 0.02 + (h0 > 0 ? (h0 - comp) : 0) + 0.072;
+      if (c.broke && egg.visible && s > 0.15) { egg.visible = false; splat.burst(egg.position.clone(), 1.2); }
+      if (s >= 1) { stack.scale.y = h0 > 0 ? Math.max(0.2, (h0 - c.d * SC * 100) / h0) : 1; finish(); }
+    }
+  }
+  refresh(); refreshTable();
+  return { update, onShow: () => graph.draw() };
+}
+
+// ---------- AR-5 แบบทดสอบ “ด่านปลดล็อกงบประมาณ” ----------
+function buildAR5(root) {
+  const Q = [
+    { q: '1. การดลของวัตถุมีค่าเท่ากับปริมาณใด', c: ['การเปลี่ยนโมเมนตัมของวัตถุ', 'มวลคูณความเร่งของวัตถุ', 'แรงหารด้วยเวลา', 'พลังงานจลน์ของวัตถุ'], a: 0,
+      e: 'การดล J = F·Δt = Δp คือการเปลี่ยนโมเมนตัมของวัตถุ และเท่ากับพื้นที่ใต้กราฟแรง–เวลา' },
+    { q: '2. ไข่มวล 0.06 kg ตกกระทบพื้นด้วยความเร็ว 5 m/s แล้วหยุดนิ่ง การดลที่ไข่ได้รับมีขนาดเท่าใด', c: ['0.012 N·s', '0.3 N·s', '3 N·s', '83 N·s'], a: 1,
+      e: 'J = Δp = mv − mu = 0 − (0.06)(5) ขนาด 0.3 N·s' },
+    { q: '3. ไข่ตกจากความสูงเท่ากัน ลงบนฟองน้ำไม่แตก แต่ลงบนพื้นแข็งแตก เพราะเหตุใด', c: ['ฟองน้ำทำให้การเปลี่ยนโมเมนตัมของไข่น้อยลง', 'ฟองน้ำยืดเวลาการชน แรงดลเฉลี่ยจึงน้อยลง', 'ฟองน้ำทำให้ไข่ตกช้าลง', 'พื้นแข็งทำให้ไข่มีมวลมากขึ้น'], a: 1,
+      e: 'Δp เท่ากันทั้งสองกรณี แต่ฟองน้ำเพิ่ม Δt ตาม F = Δp/Δt แรงดลเฉลี่ยจึงลดลง' },
+    { q: '4. ไข่มีการเปลี่ยนโมเมนตัม 0.3 kg·m/s ถ้าอุปกรณ์ยืดเวลาการชนเป็น 0.05 s แรงดลเฉลี่ยเท่าใด', c: ['0.015 N', '1.5 N', '6 N', '60 N'], a: 2,
+      e: 'F = Δp/Δt = 0.3 / 0.05 = 6 N' },
+    { q: '5. รถทดลองมวล 2 kg วิ่งด้วยความเร็ว 3 m/s ชนรถมวล 1 kg ที่จอดนิ่ง แล้วติดกันไป ความเร็วหลังชนเท่าใด', c: ['1 m/s', '1.5 m/s', '2 m/s', '3 m/s'], a: 2,
+      e: 'อนุรักษ์โมเมนตัม (2)(3) + (1)(0) = (2 + 1)v จึงได้ v = 2 m/s' },
+  ];
+  const CODES = ['EGG-0ZR', 'EGG-1MK', 'EGG-2TB', 'EGG-3HD', 'EGG-4QL', 'EGG-5VS'];
+  const L = ['ก.', 'ข.', 'ค.', 'ง.'];
+  let idx = 0, score = 0, answered = false;
+
+  // ฉาก 3 มิติประกอบแต่ละข้อ
+  const props = Q.map(() => { const g = new THREE.Group(); g.visible = false; root.add(g); return g; });
+  { const e = makeEgg(1.4); e.position.set(0, 0.25, 0); const a = makeArrow(0xffd91a); a.setTo(-0.3, 0.25, 0, 0.6, 0.02); const l = makeLabel('#ffd91a', 0.5); l.position.set(0, 0.45, 0); l.setText('J = F·Δt = Δp'); props[0].add(e, a, l); }
+  { const e = makeEgg(1.4); e.position.set(0, 0.45, 0); const f = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.04, 0.4), mat(0x8d99ae)); f.position.y = 0.02; const l = makeLabel('#33d9ff', 0.45); l.position.set(0, 0.7, 0); l.setText('v = 5 m/s  m = 0.06 kg'); props[1].add(e, f, l); props[1].userData.egg = e; }
+  { const f = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.04, 0.35), mat(0x8d99ae)); f.position.set(-0.3, 0.02, 0); const s = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.12, 0.35), mat(0xffd166)); s.position.set(0.3, 0.06, 0);
+    const e1 = makeEgg(1.2); e1.position.set(-0.3, 0.35, 0); const e2 = makeEgg(1.2); e2.position.set(0.3, 0.35, 0); props[2].add(f, s, e1, e2); props[2].userData.eggs = [e1, e2]; }
+  { for (let i = 0; i < 7; i++) { const hgt = 0.05 + 0.25 * Math.sin(Math.PI * (i + 0.5) / 7); const b = new THREE.Mesh(new THREE.BoxGeometry(0.08, hgt, 0.08), mat(0x4ade80)); b.position.set(-0.27 + i * 0.09, hgt / 2, 0); props[3].add(b); }
+    const l = makeLabel('#4ade80', 0.5); l.position.set(0, 0.42, 0); l.setText('F = Δp / Δt'); props[3].add(l); }
+  { const a = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.1, 0.16), mat(0x2f6fe0)); a.position.set(-0.3, 0.07, 0); const b = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.16), mat(0xe76f51)); b.position.set(0.2, 0.06, 0);
+    const l = makeLabel('#ffffff', 0.55); l.position.set(0, 0.32, 0); l.setText('2 kg → 3 m/s     1 kg หยุดนิ่ง'); props[4].add(a, b, l); props[4].userData.carts = [a, b]; }
+  const budgetLab = makeLabel('#ffd91a', 0.55); budgetLab.position.set(0, 0.85, 0); root.add(budgetLab);
+  const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.012, 28), mat(0xffd700, { metalness: 0.8, roughness: 0.2 }));
+  coin.rotation.x = Math.PI / 2; coin.visible = false; root.add(coin);
+  let coinT = 0;
+
+  function render() {
+    props.forEach((p, i) => p.visible = i === idx);
+    budgetLab.setText(`งบประมาณที่ได้ ${score * 2} บาท`);
+    const body = $('qBody');
+    if (idx >= Q.length) {
+      $('qHead').textContent = 'ผ่านด่านแล้ว!';
+      body.innerHTML = `<div class="score">${score} / ${Q.length} ข้อ</div>
+        <div class="msg" style="text-align:center">ได้งบประมาณเพิ่ม <span style="color:#ffd91a">${score * 2} บาท</span></div>
+        <div class="score" style="font-size:34px;letter-spacing:3px;color:#ffd91a">${CODES[score]}</div>
+        <div class="info muted" style="text-align:center">รหัสผ่าน: นำหน้าจอนี้ไปแสดงครูเพื่อรับงบประมาณ</div>`;
+      if (score >= 4) { Sound.fanfare(); confetti(); }
+      return;
+    }
+    const q = Q[idx];
+    $('qHead').textContent = `ด่านปลดล็อกงบประมาณ  ข้อ ${idx + 1} / ${Q.length}   งบที่ได้ ${score * 2} บาท   (ตอบได้ข้อละ 1 ครั้ง)`;
+    body.innerHTML = `<div class="q">${q.q}</div>` + q.c.map((c, i) => `<button class="choice" data-i="${i}">${L[i]} ${c}</button>`).join('') +
+      `<div class="info" id="qFeed"></div><div class="row"><button class="btn on" id="qNext" style="display:none">${idx === Q.length - 1 ? 'ดูผลและรหัสผ่าน' : 'ข้อต่อไป'}</button></div>`;
+    body.querySelectorAll('.choice').forEach((b) => b.onclick = () => answer(+b.dataset.i));
+    $('qNext').onclick = () => { idx++; answered = false; render(); };
+    answered = false;
+  }
+  function answer(i) {
+    if (answered) return; answered = true;
+    const q = Q[idx], ok = i === q.a;
+    if (ok) { score++; Sound.ding(); coin.visible = true; coinT = 0; } else Sound.buzz();
+    $('qBody').querySelectorAll('.choice').forEach((b) => { const k = +b.dataset.i; if (k === q.a) b.classList.add('right'); else if (k === i) b.classList.add('wrong'); b.disabled = true; });
+    $('qFeed').innerHTML = (ok ? '<span class="good"><b>ถูกต้อง! +2 บาท</b></span> ' : '<span class="bad"><b>เฉลย</b></span> ') + q.e;
+    $('qHead').textContent = `ด่านปลดล็อกงบประมาณ  ข้อ ${idx + 1} / ${Q.length}   งบที่ได้ ${score * 2} บาท`;
+    budgetLab.setText(`งบประมาณที่ได้ ${score * 2} บาท`);
+    $('qNext').style.display = '';
+  }
+  let t = 0;
+  function update(dt) {
+    t += dt;
+    if (props[1].userData.egg) { const e = props[1].userData.egg; e.position.y = 0.1 + 0.35 * Math.abs(Math.cos(t * 1.5)); }
+    for (const e of props[2].userData.eggs) e.position.y = 0.2 + 0.15 * Math.abs(Math.cos(t * 1.5)) + (e.position.x > 0 ? 0.08 : 0);
+    const cs = props[4].userData.carts; const k = (t * 0.4) % 1;
+    if (k < 0.5) { cs[0].position.x = -0.3 + k * 0.6 * 0.6; cs[1].position.x = 0.2; } else { cs[0].position.x = -0.12 + (k - 0.5) * 0.4; cs[1].position.x = cs[0].position.x + 0.21; }
+    if (coin.visible) { coinT += dt; coin.position.set(0, 0.5 + coinT * 0.6, 0); coin.rotation.z += dt * 10; if (coinT > 1) coin.visible = false; }
+  }
+  render();
+  return { update, onShow: () => {} };
+}
+
+// ---------- เริ่มระบบ AR ----------
+let current = -1;
+const sceneEls = ['s1', 's2', 's4', 's5'].map($);
+const scenes = [];
+const IDLE_TEXT = 'ส่องกล้องไปที่ภาพ AR-1, 2, 4 หรือ 5';
+
+function showPanel(i) {
+  current = i;
+  $('panel').style.display = 'flex';
+  $('panelTitle').textContent = SCENE_NAMES[i];
+  sceneEls.forEach((el, k) => el.classList.toggle('on', k === i));
+  requestAnimationFrame(() => scenes[i] && scenes[i].onShow());
+}
+
+$('collapseBtn').onclick = () => {
+  const p = $('panel');
+  p.classList.toggle('collapsed');
+  $('collapseBtn').textContent = p.classList.contains('collapsed') ? 'ขยาย' : 'ย่อ';
+  if (!p.classList.contains('collapsed') && current >= 0) requestAnimationFrame(() => scenes[current].onShow());
+};
+
+async function start() {
+  $('startBtn').disabled = true;
+  Sound.init();
+  $('startMsg').style.color = '#9fb4d8';
+  $('startMsg').textContent = 'กำลังเปิดกล้องและโหลดภาพ marker...';
+  try { await document.fonts.load('600 64px Sarabun'); } catch (e) {}
+
+  const mindar = new MindARThree({
+    container: $('ar'),
+    imageTargetSrc: './targets.mind',
+    maxTrack: 1,
+    uiScanning: 'no',
+    filterMinCF: 0.0001,
+    filterBeta: 0.001,
+  });
+  const { renderer, scene, camera } = mindar;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.6));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(0.5, 1, 1); scene.add(sun);
+
+  // ลำดับต้องตรงกับลำดับภาพตอนแปลงไฟล์ targets.mind: AR-1, AR-2, AR-4, AR-5
+  const builders = [buildAR1, buildAR2, buildAR4, buildAR5];
+  for (let i = 0; i < 4; i++) {
+    const anchor = mindar.addAnchor(i);
+    const root = new THREE.Group();
+    root.rotation.x = Math.PI / 2;   // ให้เนื้อหาตั้งขึ้นจากกระดาษที่วางราบบนโต๊ะ
+    anchor.group.add(root);
+    scenes[i] = builders[i](root);
+    anchor.onTargetFound = () => {
+      $('chip').classList.add('found');
+      $('chipText').textContent = SCENE_NAMES[i];
+      if (current !== i) showPanel(i);
+    };
+    anchor.onTargetLost = () => {
+      $('chip').classList.remove('found');
+      $('chipText').textContent = IDLE_TEXT;
+    };
+  }
+
+  try {
+    await mindar.start();
+  } catch (err) {
+    $('startBtn').disabled = false;
+    $('startMsg').style.color = '';
+    $('startMsg').textContent = 'เปิดกล้องไม่ได้ ตรวจว่าเปิดผ่านลิงก์ https และกดอนุญาตให้ใช้กล้องแล้ว จากนั้นลองใหม่';
+    console.error(err);
+    return;
+  }
+  $('start').style.display = 'none';
+  $('chip').style.display = 'flex';
+  $('slowBtn').style.display = 'block';
+  $('soundBtn').style.display = 'block';
+
+  const clock = new THREE.Clock();
+  renderer.setAnimationLoop(() => {
+    const dt = Math.min(clock.getDelta(), 0.05) * timeScale;
+    for (const s of scenes) s.update(dt);
+    renderer.render(scene, camera);
+  });
+  window.addEventListener('resize', () => { if (current >= 0) scenes[current].onShow(); });
+}
+
+$('startBtn').onclick = start;
+</script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ของจริงรอบตัว – AR-3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+<style>
+  :root { --bg: #101729; --panel: #1c2640; --line: rgba(255,255,255,0.14); --text: #fff; --muted: #9fb4d8;
+          --on: #3373e6; --off: #4d5466; --hot: #ffd91a; --good: #4ade80; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "Sarabun", "Thonburi", sans-serif; }
+  header { padding: 16px 16px 8px; }
+  header h1 { margin: 0; font-size: 26px; line-height: 1.2; }
+  header p { margin: 4px 0 0; color: var(--muted); font-size: 16px; line-height: 1.45; }
+  .tabs { display: flex; gap: 6px; padding: 8px 16px; }
+  .tabs button { flex: 1; font: inherit; font-size: 16px; color: #fff; background: var(--off); border: 0; border-radius: 10px; padding: 10px 6px; cursor: pointer; }
+  .tabs button.on { background: var(--on); }
+  model-viewer { width: 100%; height: 56vh; min-height: 320px; background: radial-gradient(circle at 50% 40%, #2a3b66, #101729 75%); --poster-color: transparent; }
+  .hot { width: 30px; height: 30px; border-radius: 50%; border: 3px solid #fff; background: var(--hot); color: #101729;
+         font: 700 15px Sarabun, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.5); display: grid; place-items: center; padding: 0; }
+  .hot.on { background: #ff7326; transform: scale(1.15); }
+  .ar-btn { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); font: 700 17px Sarabun, sans-serif; color: #fff;
+            background: #d93333; border: 0; border-radius: 999px; padding: 12px 22px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.4); white-space: nowrap; }
+  .card { margin: 12px 16px; padding: 14px; background: var(--panel); border-radius: 14px; }
+  .card h2 { margin: 0 0 6px; font-size: 19px; color: #b3d9ff; }
+  .card p { margin: 0; font-size: 16px; line-height: 1.55; }
+  .card .key { color: var(--hot); font-weight: 600; }
+  .note { margin: 0 16px 24px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+  a { color: var(--hot); }
+</style>
+</head>
+<body>
+<header>
+  <h1>AR-3 ของจริงรอบตัว</h1>
+  <p>แตะจุดสีเหลืองบนโมเดลเพื่อดูว่าส่วนนั้นยืดเวลาการชน (Δt) อย่างไร แล้วกด “ดูในพื้นที่ของคุณ” เพื่อวางของจริงขนาดจริงบนโต๊ะ</p>
+</header>
+<div class="tabs" id="tabs">
+  <button data-k="helmet" class="on">หมวกกันน็อกผ่าครึ่ง</button>
+  <button data-k="airbag">ถุงลมนิรภัย</button>
+  <button data-k="carton">กล่องบรรจุไข่</button>
+</div>
+<model-viewer id="mv" src="./models/helmet.glb" ar ar-modes="webxr scene-viewer quick-look" ar-scale="fixed" ar-placement="floor"
+  camera-controls touch-action="pan-y" shadow-intensity="1" exposure="1.1" environment-image="neutral" interaction-prompt="none" alt="โมเดล 3 มิติ">
+  <button slot="ar-button" class="ar-btn">ดูในพื้นที่ของคุณ (ขนาดจริง)</button>
+</model-viewer>
+<div class="card" id="card"><h2 id="cardTitle"></h2><p id="cardText"></p></div>
+<p class="note">ใช้ได้ทั้ง iPhone และ Android ไม่ต้องลงแอป ในโหมดวางบนโต๊ะจริงจะไม่มีจุดสีเหลือง ให้อ่านคำอธิบายในโหมด 3 มิติก่อน · <a href="./index.html">กลับไปหน้าสแกน marker</a></p>
+
+<script>
+const MODELS = {
+  helmet: {
+    src: './models/helmet.glb', orbit: '200deg 70deg auto', intro: 'หมวกกันน็อกผ่าครึ่ง กว้างประมาณ 31 cm เห็นวัสดุ 3 ชั้น',
+    summary: 'เมื่อศีรษะกระแทก Δp ของศีรษะเท่าเดิม แต่ชั้นโฟม EPS ยุบตัวช้า ๆ ทำให้ Δt ยาวขึ้น แรงดลเฉลี่ย F = Δp/Δt ที่ศีรษะได้รับจึงลดลงมาก',
+    hot: [
+      { pos: '0.129 0.063 0', n: '0 0 -1', t: 'เปลือกแข็ง ABS (สีแดง)', d: 'กระจายแรงกระแทกออกเป็นพื้นที่กว้าง ไม่ให้แรงรวมอยู่จุดเดียว และกันของแหลมทะลุ' },
+      { pos: '0.093 0.079 0', n: '0 0 -1', t: 'โฟม EPS (สีขาว) ส่วนสำคัญที่สุด', d: 'โฟมยุบตัวเมื่อกระแทก <span class="key">ยืดเวลาการหยุดของศีรษะ (Δt ยาวขึ้น)</span> แรงดลจึงลดลง โฟมที่ยุบแล้วไม่คืนรูป จึงต้องเปลี่ยนหมวกหลังเกิดอุบัติเหตุ' },
+      { pos: '0.039 0.091 0', n: '0 0 -1', t: 'ฟองน้ำบุด้านใน (สีเข้ม)', d: 'ทำให้หมวกแนบพอดีศีรษะ ศีรษะจึงเริ่มหยุดพร้อมกับหมวก ไม่กระแทกซ้ำภายในหมวก' },
+    ],
+  },
+  airbag: {
+    src: './models/airbag.glb', orbit: '160deg 75deg auto', intro: 'พวงมาลัยกับถุงลมนิรภัยที่พองตัวแล้ว ขนาดประมาณ 50–75 cm',
+    summary: 'ศีรษะผู้ขับขี่มี Δp เท่าเดิมไม่ว่าจะชนอะไร ถุงลมยืดเวลาการหยุดให้ยาวขึ้นหลายเท่า แรงดลเฉลี่ยจึงลดลงหลายเท่าเช่นกัน',
+    hot: [
+      { pos: '0 0.42 -0.34', n: '0 0 -1', t: 'ถุงลมที่พองตัว', d: 'พองตัวภายในเสี้ยววินาทีหลังชน รองรับศีรษะให้ <span class="key">หยุดช้าลง Δt ยาวขึ้น</span> แทนที่จะหยุดทันทีเมื่อกระแทกพวงมาลัย' },
+      { pos: '0.2 0.48 -0.15', n: '1 0 0', t: 'รูระบายลม', d: 'ปล่อยลมออกช้า ๆ ขณะศีรษะกดลง ถุงจึงยุบตัวนุ่ม ๆ ไม่เด้งศีรษะกลับ ช่วยยืด Δt ต่อเนื่อง' },
+      { pos: '0 0.56 -0.42', n: '0 1 0', t: 'ศีรษะหุ่นทดสอบ', d: 'Δp = mv − mu ของศีรษะเท่าเดิม แต่ F = Δp/Δt จึงเล็กลงเมื่อ Δt ยาวขึ้น' },
+      { pos: '0.18 0.3 0', n: '1 0 0', t: 'พวงมาลัย', d: 'ถ้าไม่มีถุงลม ศีรษะจะกระแทกพวงมาลัยแข็ง Δt สั้นมาก แรงดลจึงสูงมาก' },
+    ],
+  },
+  carton: {
+    src: './models/eggcarton.glb', orbit: '200deg 55deg auto', intro: 'กล่องบรรจุไข่ 6 ฟอง ขนาดประมาณ 16 × 11 cm',
+    summary: 'กล่องไข่ใช้หลักเดียวกับอุปกรณ์ไข่แข็งแรงที่นักเรียนจะสร้าง: วัสดุยุบตัวได้รอบไข่ ยืด Δt เมื่อกล่องถูกกระแทก',
+    hot: [
+      { pos: '0.076 0.03 0.026', n: '1 0 0', t: 'หลุมรองไข่ (กระดาษเยื่อ)', d: 'ผนังกระดาษเยื่อยุบตัวได้เมื่อกล่องตกหรือถูกกระแทก <span class="key">ยืดเวลาการชน</span> แรงที่ไข่ได้รับจึงลดลง' },
+      { pos: '0 0.081 -0.026', n: '0 1 0', t: 'ไข่แต่ละฟองแยกหลุม', d: 'ไข่ไม่กระทบกันเอง และถูกรองรับรอบด้าน แรงจึงกระจายไม่รวมที่จุดเดียว' },
+      { pos: '0 0.13 0.085', n: '0 0 -1', t: 'ฝากล่อง', d: 'ฝาโค้งยุบตัวรับแรงจากด้านบน และกันไม่ให้ไข่หลุดออกเมื่อกล่องพลิก' },
+    ],
+  },
+};
+const mv = document.getElementById('mv');
+let cur = 'helmet';
+function card(title, text) { document.getElementById('cardTitle').textContent = title; document.getElementById('cardText').innerHTML = text; }
+function load(k) {
+  cur = k; const m = MODELS[k];
+  document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.k === k));
+  mv.querySelectorAll('.hot').forEach((h) => h.remove());
+  mv.src = m.src; mv.cameraOrbit = m.orbit;
+  m.hot.forEach((h, i) => {
+    const b = document.createElement('button');
+    b.className = 'hot'; b.slot = 'hotspot-' + i; b.dataset.position = h.pos; b.dataset.normal = h.n; b.textContent = i + 1;
+    b.onclick = () => { mv.querySelectorAll('.hot').forEach((x) => x.classList.toggle('on', x === b)); card(h.t, h.d); };
+    mv.appendChild(b);
+  });
+  card(m.intro, m.summary);
+}
+document.querySelectorAll('#tabs button').forEach((b) => b.onclick = () => load(b.dataset.k));
+load('helmet');
+</script>
+</body>
+</html>
