@@ -179,6 +179,7 @@
       <div class="row">
         <button class="btn go" id="e2Go">ปล่อยไข่ทั้ง 2 ฟอง!</button>
         <button class="btn" id="e2Again" style="flex:0.6">ดูซ้ำ</button>
+        <button class="btn" id="e2Clr" style="flex:0.5">ล้างผล</button>
       </div>
       <div class="info" id="e2Info"></div>
       <canvas class="graph" id="e2Graph"></canvas>
@@ -709,6 +710,7 @@ function buildAR2(root) {
   }
   $('e2Go').onclick = () => { graph.clear(); reset(); phase = 'run'; Sound.tone(700, 0.6, 'sine', 0.08, 0, 300); };
   $('e2Again').onclick = $('e2Go').onclick;
+  $('e2Clr').onclick = () => { graph.clear(); reset(); graph.draw(); };
 
   function update(dt) {
     for (const c of cases) c.splat.update(dt);
