@@ -119,6 +119,9 @@
 
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
+  .ar3 { display: block; max-width: 26em; text-decoration: none; color: #fff; background: rgba(255,217,26,0.12); border: 2px solid #ffd91a; border-radius: 14px; padding: 10px 14px; }
+  .ar3 b { display: block; color: #ffd91a; font-size: 18px; }
+  .ar3 span { display: block; color: #d8e2f5; font-size: 14px; line-height: 1.45; margin-top: 2px; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
   .chip { font: inherit; font-size: 14px; color: #fff; background: var(--tab-off); border: 0; border-radius: 999px; padding: 6px 10px; cursor: pointer; }
   .chip.on { background: var(--tab-on); }
@@ -135,7 +138,7 @@
   <div class="markers"><span>1</span><span>2</span><span>4</span><span>5</span></div>
   <button id="startBtn">เปิดกล้อง</button>
   <div id="startMsg"></div>
-  <a class="small" href="./real.html" style="color:#ffd91a">AR-3 ของจริงรอบตัว (หมวกกันน็อก ถุงลมนิรภัย กล่องไข่) แตะที่นี่</a>
+  <a class="ar3" href="./real.html"><b>AR-3 ของจริงรอบตัว</b><span>สื่อนี้ไม่ต้องสแกน marker แตะเพื่อเปิดโมเดลหมวกกันน็อก ถุงลมนิรภัย กล่องไข่ แล้ววางบนโต๊ะจริงในขนาดจริง</span></a>
   <div class="small">เมื่อเบราว์เซอร์ถาม ให้กด “อนุญาต” ใช้กล้อง</div>
 </div>
 
@@ -187,7 +190,7 @@
     <div class="scene" id="s4">
       <label class="sl">วัสดุรองรับ (ราคาตามตารางวัสดุเสริม)</label>
       <div class="chips" id="matRow"></div>
-      <label class="sl" id="layLab"></label><input type="range" id="lay" min="1" max="4" step="1" value="1">
+      <label class="sl" id="layLab"></label><input type="range" id="lay" min="1" max="4" step="1" value="2">
       <label class="sl">ความสูงที่ปล่อย</label>
       <div class="row" id="hRow">
         <button class="btn" data-h="1">1 m</button>
@@ -494,7 +497,8 @@ function makePole(root, x, z, h, label) {
 }
 
 // ---------- AR-1 Momentum Collision Lab ----------
-function buildAR1(root) {
+function buildAR1(root0) {
+  const root = new THREE.Group(); root.scale.setScalar(0.62); root0.add(root);   // ย่อให้รางพอดีกับการ์ด
   const S = { mode: 'stick', m1: 1, u1: 2, m2: 1, u2: 0, J: 1.5, phase: 'idle', x1: -0.75, x2: 0, v1: 0, v2: 0, t: 0, rows: [], after: null };
   const L = 0.22, VS = 0.15;   // ความยาวรถ (หน่วยฉาก), สเกลความเร็ว
 
@@ -810,7 +814,7 @@ function buildAR4(root) {
     $('matRow').querySelectorAll('button').forEach((b) => b.classList.toggle('on', MATS[+b.dataset.i] === S.mat));
     document.querySelectorAll('#hRow button').forEach((b) => b.classList.toggle('on', +b.dataset.h === S.h));
     $('lay').disabled = S.mat.id === 'none';
-    $('layLab').textContent = S.mat.id === 'none' ? 'จำนวนชั้น: ไม่มีวัสดุรองรับ' : `จำนวน${S.mat.name}  ${S.layers} ${S.mat.unit}`;
+    $('layLab').textContent = S.mat.id === 'none' ? 'จำนวนชั้น: ไม่มีวัสดุรองรับ' : `จำนวน${S.mat.name}  ${S.layers} ${S.mat.unit}  (ความหนารวม ${(S.layers * S.mat.thick).toFixed(1)} cm)`;
     const c = calc();
     let s = `ต้นทุน <b>${c.cost} บาท</b>   มวลอุปกรณ์ <b>${c.mass} g</b>   ขนาดรวมประมาณ ${c.size.toFixed(1)} cm   ระยะยุบตัว ${(c.d * 100).toFixed(1)} cm`;
     const warn = [];

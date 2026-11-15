@@ -31,6 +31,9 @@
   .card .key { color: var(--hot); font-weight: 600; }
   .note { margin: 0 16px 24px; color: var(--muted); font-size: 14px; line-height: 1.5; }
   a { color: var(--hot); }
+  .status { position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); max-width: 86%; text-align: center;
+            background: rgba(16,23,41,0.85); border-radius: 12px; padding: 10px 14px; font-size: 16px; line-height: 1.5; }
+  .status.err { color: #f87171; border: 1px solid #f87171; }
 </style>
 </head>
 <body>
@@ -46,6 +49,7 @@
 <model-viewer id="mv" src="./models/helmet.glb" ar ar-modes="webxr scene-viewer quick-look" ar-scale="fixed" ar-placement="floor"
   camera-controls touch-action="pan-y" shadow-intensity="1" exposure="1.1" environment-image="neutral" interaction-prompt="none" alt="โมเดล 3 มิติ">
   <button slot="ar-button" class="ar-btn">ดูในพื้นที่ของคุณ (ขนาดจริง)</button>
+  <div id="status" class="status">กำลังโหลดโมเดล 3 มิติ...</div>
 </model-viewer>
 <div class="card" id="card"><h2 id="cardTitle"></h2><p id="cardText"></p></div>
 <p class="note">ใช้ได้ทั้ง iPhone และ Android ไม่ต้องลงแอป ในโหมดวางบนโต๊ะจริงจะไม่มีจุดสีเหลือง ให้อ่านคำอธิบายในโหมด 3 มิติก่อน · <a href="./index.html">กลับไปหน้าสแกน marker</a></p>
@@ -97,7 +101,15 @@ function load(k) {
   });
   card(m.intro, m.summary);
 }
-document.querySelectorAll('#tabs button').forEach((b) => b.onclick = () => load(b.dataset.k));
+const st = document.getElementById('status');
+mv.addEventListener('progress', (e) => { if (e.detail.totalProgress < 1) { st.style.display = ''; st.className = 'status'; st.textContent = `กำลังโหลดโมเดล 3 มิติ... ${Math.round(e.detail.totalProgress * 100)}%`; } });
+mv.addEventListener('load', () => { st.style.display = 'none'; });
+mv.addEventListener('error', () => {
+  st.style.display = ''; st.className = 'status err';
+  st.innerHTML = `โหลดโมเดลไม่ได้<br>ตรวจว่ามีไฟล์ <b>plan2/${MODELS[cur].src.slice(2)}</b> บน GitHub แล้ว จากนั้นรีเฟรชหน้านี้`;
+});
+setTimeout(() => { if (!customElements.get('model-viewer')) { st.className = 'status err'; st.textContent = 'โหลดตัวแสดงผล 3 มิติไม่ได้ ตรวจอินเทอร์เน็ตแล้วรีเฟรชหน้านี้'; } }, 8000);
+document.querySelectorAll('#tabs button').forEach((b) => b.onclick = () => { st.style.display = ''; st.className = 'status'; st.textContent = 'กำลังโหลดโมเดล 3 มิติ...'; load(b.dataset.k); });
 load('helmet');
 </script>
 </body>
