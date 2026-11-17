@@ -546,13 +546,13 @@ function buildAR1(root) {
   makeRail(root, 1.5);
   const c1 = makeCar(0x2f6fe0, L), c2 = makeCar(0xe76f51, L); root.add(c1, c2);
   const a1 = makeArrow(0x33d9ff), a2 = makeArrow(0xffa94d), aT = makeArrow(0xc77dff);
-  const l1 = makeLabel('#33d9ff', 0.55), l2 = makeLabel('#ffa94d', 0.55), lT = makeLabel('#c77dff', 0.66), lE = makeLabel('#ffd91a', 0.66), lHit = makeLabel('#ff7326', 0.6);
+  const l1 = makeLabel('#33d9ff', 0.6), l2 = makeLabel('#ffa94d', 0.6), lT = makeLabel('#c77dff', 0.7), lE = makeLabel('#ffd91a', 0.7), lHit = makeLabel('#ff7326', 0.75);
   root.add(a1, a2, aT, l1, l2, lT, lE, lHit);
   const sparks = makeSparks(root), heat = makeSparks(root, 0xff7326, 30);
   const gh1 = makeGhosts(root, 0x33d9ff), gh2 = makeGhosts(root, 0xffa94d), FLASH = 0.25;
   // ลูกแก้วพลังงานจลน์: ขนาดตามพลังงานจลน์รวม
   const orb = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), new THREE.MeshStandardMaterial({ color: 0xffd91a, emissive: 0x806000, transparent: true, opacity: 0.85 }));
-  orb.position.set(0, 0.78, -0.22); root.add(orb);
+  orb.position.set(0, 0.66, 0); root.add(orb);
 
   const tabs = document.querySelectorAll('#s1 .tabs button');
   const setMode = (m) => { S.mode = m; tabs.forEach((x) => x.classList.toggle('on', x.dataset.mode === m)); };
@@ -671,12 +671,12 @@ function buildAR1(root) {
     const PS = 0.9, p1 = S.m1 * S.v1, p2 = S.m2 * S.v2;
     const h1 = c1.userData.top * c1.scale.x, h2 = c2.userData.top * c2.scale.x;
     a1.setTo(cx1, h1 + 0.04, 0, p1 * PS); a2.setTo(cx2, h2 + 0.04, 0, p2 * PS);
-    l1.position.set(cx1, 0.30, -0.22); l1.setText(`p₁ = ${sgn(p1, 3)}  Ek₁ = ${ek(S.m1, S.v1).toFixed(3)}`);
-    l2.position.set(cx2, 0.39, -0.22); l2.setText(`p₂ = ${sgn(p2, 3)}  Ek₂ = ${ek(S.m2, S.v2).toFixed(3)}`);
+    l1.position.set(cx1, h1 + 0.1, -0.04); l1.setText(`p₁ = ${sgn(p1, 3)}  Ek₁ = ${ek(S.m1, S.v1).toFixed(3)}`);
+    l2.position.set(cx2, h2 + 0.17, 0.04); l2.setText(`p₂ = ${sgn(p2, 3)}  Ek₂ = ${ek(S.m2, S.v2).toFixed(3)}`);
     const tot = p1 + p2, kt = ek(S.m1, S.v1) + ek(S.m2, S.v2);
-    aT.setTo(0, 0.58, -0.22, tot * PS, 0.018); lT.position.set(0, 0.64, -0.22); lT.setText(`โมเมนตัมรวม Σp = ${sgn(tot, 3)} kg·m/s`);
-    orb.scale.setScalar(0.02 + Math.sqrt(kt) * 0.12); lE.position.set(0, 0.93, -0.22); lE.setText(`พลังงานจลน์รวม ΣEk = ${kt.toFixed(3)} J`);
-    if (S.hitT > 0) { lHit.position.set((cx1 + cx2) / 2, 0.49, -0.22); lHit.setText(S.mode === 'elastic' ? 'เด้ง! ΣEk เท่าเดิม' : S.mode === 'stick' ? 'ติด! ΣEk ลดมากที่สุด' : 'ยุบ! ΣEk ลดลงบางส่วน'); } else lHit.setText('');
+    aT.setTo(0, 0.42, 0, tot * PS, 0.018); lT.position.set(0, 0.48, 0); lT.setText(`โมเมนตัมรวม Σp = ${sgn(tot, 3)} kg·m/s`);
+    orb.scale.setScalar(0.02 + Math.sqrt(kt) * 0.12); lE.position.set(0, 0.82, 0); lE.setText(`พลังงานจลน์รวม ΣEk = ${kt.toFixed(3)} J`);
+    if (S.hitT > 0) { lHit.position.set((cx1 + cx2) / 2, 0.36, 0); lHit.setText(S.mode === 'elastic' ? 'เด้ง! ΣEk เท่าเดิม' : S.mode === 'stick' ? 'ติด! ΣEk ลดมากที่สุด' : 'ยุบ! ΣEk ลดลงบางส่วน'); } else lHit.setText('');
     sparks.update(dt); heat.update(dt, -0.3);
   }
   reset(); refreshTable();
@@ -695,8 +695,8 @@ function buildAR2(root) {
   const l1 = makeLabel('#33d9ff', 0.6), l2 = makeLabel('#ffa94d', 0.6), lT = makeLabel('#c77dff', 0.72), lE = makeLabel('#ffd91a', 0.72), lPop = makeLabel('#ff7326', 0.5);
   root.add(a1, a2, l1, l2, lT, lE, lPop);
   // แถบโมเมนตัมรวม (ศูนย์ตลอด) เหนือราง
-  const meterBg = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.03, 0.01), mat(0x2b3550)); meterBg.position.set(0, 0.58, -0.22); root.add(meterBg);
-  const meterZero = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.07, 0.012), new THREE.MeshBasicMaterial({ color: 0xc77dff })); meterZero.position.set(0, 0.58, -0.22 + 0.006); root.add(meterZero);
+  const meterBg = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.03, 0.01), mat(0x2b3550)); meterBg.position.set(0, 0.56, 0); root.add(meterBg);
+  const meterZero = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.07, 0.012), new THREE.MeshBasicMaterial({ color: 0xc77dff })); meterZero.position.set(0, 0.56, 0.006); root.add(meterZero);
   const sparks = makeSparks(root, 0xffffff, 18);
   const gh1 = makeGhosts(root, 0x33d9ff), gh2 = makeGhosts(root, 0xffa94d);
   const graph = new Graph($('e2Graph'), { tMax: 2, tStep: 0.5, tFmt: (t) => t.toFixed(1), pMin: -0.15, pMax: 0.15, pStep: 0.05, fmt: (p) => p.toFixed(2), yLabel: 'p (kg·m/s)', maxSeries: 3 });
@@ -774,11 +774,11 @@ function buildAR2(root) {
     const PS = 4, p1 = S.m1 * S.v1, p2 = S.m2 * S.v2;
     const h1 = c1.userData.top * c1.scale.x, h2 = c2.userData.top * c2.scale.x;
     a1.setTo(S.x1, h1 + 0.04, 0, p1 * PS); a2.setTo(S.x2, h2 + 0.04, 0, p2 * PS);
-    l1.position.set(S.x1, 0.30, -0.22); l1.setText(S.done ? `p₁ = ${sgn(p1, 3)}  v₁ = ${sgn(S.v1, 2)}` : `m₁ = ${S.m1.toFixed(2)} kg`);
-    l2.position.set(S.x2, 0.39, -0.22); l2.setText(S.done ? `p₂ = ${sgn(p2, 3)}  v₂ = ${sgn(S.v2, 2)}` : `m₂ = ${S.m2.toFixed(2)} kg`);
-    lT.position.set(0, 0.66, -0.22); lT.setText(`โมเมนตัมรวม Σp = ${sgn(p1 + p2, 3)} (ศูนย์ตลอด)`);
-    lE.position.set(0, 0.76, -0.22); lE.setText(S.done ? `ΣEk = ${(ek(S.m1, S.v1) + ek(S.m2, S.v2)).toFixed(3)} J (เพิ่มจาก 0)` : 'ΣEk = 0 J  สปริงสะสมพลังงานไว้');
-    if (S.pop > 0) { S.pop -= dt; lPop.position.set(0, 0.49, -0.22); } else lPop.setText('');
+    l1.position.set(S.x1, h1 + 0.11, 0); l1.setText(S.done ? `p₁ = ${sgn(p1, 3)}  v₁ = ${sgn(S.v1, 2)}` : `m₁ = ${S.m1.toFixed(2)} kg`);
+    l2.position.set(S.x2, h2 + 0.18, 0); l2.setText(S.done ? `p₂ = ${sgn(p2, 3)}  v₂ = ${sgn(S.v2, 2)}` : `m₂ = ${S.m2.toFixed(2)} kg`);
+    lT.position.set(0, 0.63, 0); lT.setText(`โมเมนตัมรวม Σp = ${sgn(p1 + p2, 3)} (ศูนย์ตลอด)`);
+    lE.position.set(0, 0.74, 0); lE.setText(S.done ? `ΣEk = ${(ek(S.m1, S.v1) + ek(S.m2, S.v2)).toFixed(3)} J (เพิ่มจาก 0)` : 'ΣEk = 0 J  สปริงสะสมพลังงานไว้');
+    if (S.pop > 0) { S.pop -= dt; lPop.position.set(0, 0.32, 0); } else lPop.setText('');
     sparks.update(dt);
   }
   reset(); refreshTable();
@@ -807,22 +807,22 @@ function buildAR3(root) {
   const mk = (g, col, len) => { const c = makeCar(col, len); g.add(c); return c; };
   // ข้อ 1 เด้งยืดหยุ่น
   makeRail(props[0], 1.0); const q1a = mk(props[0], 0x2f6fe0, 0.14), q1b = mk(props[0], 0xe76f51, 0.14); q1a.userData.setBumper('band');
-  { const l = makeLabel('#ffd91a', 0.7); l.position.set(0, 0.42, -0.22); l.setText('ยืดหยุ่น: Σp คงตัว และ ΣEk คงตัว'); props[0].add(l); }
+  { const l = makeLabel('#ffd91a', 0.7); l.position.set(0, 0.36, 0); l.setText('ยืดหยุ่น: Σp คงตัว และ ΣEk คงตัว'); props[0].add(l); }
   // ข้อ 2 ติดกันไป
   makeRail(props[1], 1.0); const q2a = mk(props[1], 0x2f6fe0, 0.15), q2b = mk(props[1], 0xe76f51, 0.13); q2a.userData.setBumper('clay');
-  { const l = makeLabel('#ffffff', 0.75); l.position.set(0, 0.42, -0.22); l.setText('0.15 kg  →  0.8 m/s       0.1 kg หยุดนิ่ง'); props[1].add(l); }
+  { const l = makeLabel('#ffffff', 0.75); l.position.set(0, 0.36, 0); l.setText('0.15 kg  →  0.8 m/s       0.1 kg หยุดนิ่ง'); props[1].add(l); }
   // ข้อ 3 พลังงานหายไปไหน
   makeRail(props[2], 1.0); const q3a = mk(props[2], 0x2f6fe0, 0.14), q3b = mk(props[2], 0xe76f51, 0.14); q3a.userData.setBumper('clay'); const q3h = makeSparks(props[2], 0xff7326, 26);
-  { const l = makeLabel('#ff7326', 0.6); l.position.set(0, 0.42, -0.22); l.setText('ΣEk หายไปไหน?'); props[2].add(l); }
+  { const l = makeLabel('#ff7326', 0.6); l.position.set(0, 0.36, 0); l.setText('ΣEk หายไปไหน?'); props[2].add(l); }
   // ข้อ 4 ดีดตัวแยก
   makeRail(props[3], 1.0); const q4a = mk(props[3], 0x2f6fe0, 0.17), q4b = mk(props[3], 0xe76f51, 0.13); const q4s = makeCoil(props[3]);
-  { const l = makeLabel('#ffffff', 0.7); l.position.set(0, 0.42, -0.22); l.setText('0.2 kg  ←  ?          0.1 kg  →  0.6 m/s'); props[3].add(l); }
+  { const l = makeLabel('#ffffff', 0.7); l.position.set(0, 0.36, 0); l.setText('0.2 kg  ←  ?          0.1 kg  →  0.6 m/s'); props[3].add(l); }
   // ข้อ 5 ชนผนังพร้อมกัน
   makeRail(props[4], 1.1); makeWall(props[4], -0.55); makeWall(props[4], 0.55);
   const q5a = mk(props[4], 0x2f6fe0, 0.15), q5b = mk(props[4], 0xe76f51, 0.11);
-  { const l = makeLabel('#ffffff', 0.62); l.position.set(0, 0.42, -0.22); l.setText('A 0.3 kg: ? cm       B 0.1 kg: 60 cm'); props[4].add(l); }
+  { const l = makeLabel('#ffffff', 0.62); l.position.set(0, 0.36, 0); l.setText('A 0.3 kg: ? cm       B 0.1 kg: 60 cm'); props[4].add(l); }
 
-  const coinLab = makeLabel('#ffd91a', 0.6); coinLab.position.set(0, 0.56, -0.22); root.add(coinLab);
+  const coinLab = makeLabel('#ffd91a', 0.6); coinLab.position.set(0, 0.62, 0); root.add(coinLab);
   const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.012, 28), mat(0xffd700, { metalness: 0.8, roughness: 0.2 }));
   coin.rotation.x = Math.PI / 2; coin.visible = false; root.add(coin);
   let coinT = 0;
@@ -922,7 +922,7 @@ function buildAR4(root) {
     $('puLab').style.display = $('pu').style.display = S.stage === 3 ? 'none' : '';
     $('pGo').textContent = S.stage === 3 ? 'ตรวจคำตอบ: ปล่อยสปริง' : 'จำลองด่านนี้';
     $('pMsg').textContent = ''; lRes.setText('');
-    flag.setText(S.stage === 2 ? 'เส้น 20 cm' : ''); flagPole.visible = S.stage === 2; flag.position.set(-0.35 + 0.2, 0.18, 0.16); flagPole.position.set(-0.35 + 0.2, 0.06, 0.1);
+    flag.setText(S.stage === 2 ? 'เส้น 20 cm' : ''); flagPole.visible = S.stage === 2; flag.position.set(-0.35 + 0.2, 0.2, 0.1); flagPole.position.set(-0.35 + 0.2, 0.06, 0.1);
     info(); table();
   }
   function info() {
@@ -983,15 +983,15 @@ function buildAR4(root) {
     }
     me.position.x = S.xm; tg.position.x = S.xt;
     me.userData.squish(S.stage === 2 && S.hit ? 1 : 0); tg.userData.squish(S.stage === 2 && S.hit ? 1 : 0);
-    lMe.position.set(S.xm, 0.28, -0.22); lMe.setText(`กลุ่ม ${S.m} g  v = ${sgn(S.vm)}`);
-    lTg.position.set(S.xt, 0.37, -0.22); lTg.setText(`รถเป้า 100 g  v = ${sgn(S.vt)}`);
+    lMe.position.set(S.xm, 0.2, -0.02); lMe.setText(`กลุ่ม ${S.m} g  v = ${sgn(S.vm)}`);
+    lTg.position.set(S.xt, 0.28, 0.02); lTg.setText(`รถเป้า 100 g  v = ${sgn(S.vt)}`);
     if (S.stage === 3) {
       coil.visible = !S.hit; coil.scale.set(0.03, 1, 1); coil.position.set((S.xm + S.xt) / 2, 0.06, 0);
       const lg = (S.xm - CL / 2 * me.scale.x + 0.6) / CM, rg = (0.6 - S.xt - CL / 2) / CM;
-      lD1.position.set((-0.6 + S.xm) / 2, 0.05, 0.16); lD1.setText(`${Math.max(0, lg).toFixed(0)} cm`);
-      lD2.position.set((0.6 + S.xt) / 2, 0.05, 0.16); lD2.setText(`${Math.max(0, rg).toFixed(0)} cm`);
+      lD1.position.set((-0.6 + S.xm) / 2, 0.12, 0.1); lD1.setText(`${Math.max(0, lg).toFixed(0)} cm`);
+      lD2.position.set((0.6 + S.xt) / 2, 0.12, 0.1); lD2.setText(`${Math.max(0, rg).toFixed(0)} cm`);
     }
-    lRes.position.set(0, 0.50, -0.22);
+    lRes.position.set(0, 0.42, 0);
     sparks.update(dt0);
   }
   function finish() {
@@ -1058,8 +1058,8 @@ function buildAR5(root) {
   { const b = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.04, 0.3), mat(0x2b2d42)); b.position.y = 0.02; scale.add(b);
     const plate = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.008, 0.22), mat(0xced4da, { metalness: 0.6, roughness: 0.3 })); plate.position.y = 0.044; scale.add(plate); }
   const readout = makeLabel('#4ade80', 0.42); readout.position.set(0, 0.06, 0.2); scale.add(readout);
-  const label = makeLabel('#ffd91a', 0.8); label.position.set(0, 0.6, -0.22); root.add(label);
-  const sub = makeLabel('#ffffff', 0.8); sub.position.set(0, 0.51, -0.22); root.add(sub);
+  const label = makeLabel('#ffd91a', 0.85); label.position.set(0, 0.5, 0); root.add(label);
+  const sub = makeLabel('#ffffff', 0.85); sub.position.set(0, 0.43, 0); root.add(sub);
 
   document.querySelectorAll('#bTabs button').forEach((b) => b.onclick = () => { S.tab = b.dataset.t; document.querySelectorAll('#bTabs button').forEach((x) => x.classList.toggle('on', x === b)); show(); });
   $('bPrev').onclick = () => { if (S.step > 0) { S.step--; S.t = 0; show(); } };
