@@ -195,7 +195,7 @@
       <div class="info" id="c1Info"></div>
       <canvas class="graph" id="c1Bars" style="height:150px"></canvas>
       <div class="msg" id="c1Msg"></div>
-      <div class="muted" style="font-size:14px">ตารางผล (5 ครั้งล่าสุด) บันทึกลงใบกิจกรรมที่ 3 · m (kg) u, v (m/s) p (kg·m/s) Ek (J)</div>
+      <div class="muted" style="font-size:14px">ตารางผล ทำซ้ำค่าเดิม 3 ครั้ง ระบบหาค่าเฉลี่ยให้ (แถวสีทอง) · m (kg) u, v (m/s) p (kg·m/s) Ek (J)</div>
       <div class="tablewrap"><table id="c1Table"></table></div>
     </div>
 
@@ -212,7 +212,7 @@
       <div class="info" id="e2Info"></div>
       <canvas class="graph" id="e2Graph"></canvas>
       <div class="msg good" id="e2Msg"></div>
-      <div class="muted" style="font-size:14px">ตารางผล (5 ครั้งล่าสุด) บันทึกในภารกิจย่อย ง</div>
+      <div class="muted" style="font-size:14px">ตารางผล ปล่อยซ้ำ 3 ครั้ง ระบบหาค่าเฉลี่ยให้ (แถวสีทอง) บันทึกในภารกิจย่อย ง</div>
       <div class="tablewrap"><table id="e2Table"></table></div>
     </div>
 
@@ -475,6 +475,24 @@ $('slowBtn').onclick = () => {
 document.addEventListener('visibilitychange', () => { if (!document.hidden) Sound.init(); });
 $('soundBtn').onclick = () => { Sound.init(); Sound.on = !Sound.on; $('soundBtn').textContent = Sound.on ? '🔊' : '🔇'; };
 
+// ---------- ทดลองซ้ำ 3 ครั้งแล้วหาค่าเฉลี่ย ----------
+// ผลแต่ละครั้งแกว่งเล็กน้อยแบบสุ่ม (ประมาณ ±pct) เหมือนการทดลองจริง เช่น แรงผลักรถแต่ละครั้งไม่เท่ากันเป๊ะ
+function jitter(pct) { let u = 0; for (let i = 0; i < 6; i++) u += Math.random(); const z = Math.max(-2, Math.min(2, (u - 3) / 0.707)); return 1 + z * pct / 2; }
+// นับครั้งที่ของชุดค่าเดียวกัน (1→2→3 แล้ววนใหม่)
+function trialCounter() { const m = new Map(); return { next(key) { const n = (m.get(key) || 0) % 3 + 1; m.set(key, n); return n; }, clear() { m.clear(); } }; }
+// แทรกแถวค่าเฉลี่ยหลังครบ 3 ครั้ง: rows = [{key, n, v:[ค่าตัวเลข...]}]  คืน [{...row} หรือ {avg:true, key, v}]
+function withAverages(rows) {
+  const out = [], buf = new Map();
+  for (const r of rows) {
+    out.push(r);
+    if (r.n === 1) buf.set(r.key, [r]); else buf.set(r.key, [...(buf.get(r.key) || []), r]);
+    const g = buf.get(r.key);
+    if (r.n === 3 && g.length === 3) out.push({ avg: true, key: r.key, label: r.label, v: r.v.map((_, i) => typeof r.v[i] === 'number' ? g.reduce((s, x) => s + x.v[i], 0) / 3 : r.v[i]) });
+  }
+  return out;
+}
+const TRIAL_CSS = 'background:#3a3216;color:#ffd91a;font-weight:700';
+
 // ===== ตัวช่วยสำหรับแผนที่ 3 =====
 const sgn = (x, d = 2) => (x > 0.00049 ? '+' : x < -0.00049 ? '−' : '') + Math.abs(x).toFixed(d);
 const ek = (m, v) => 0.5 * m * v * v;
@@ -561,7 +579,7 @@ function makeCoil(root) {
 
 // ---------- AR 1 Collision Lab ----------
 function buildAR1(root) {
-  const S = { mode: 'elastic', m1: 0.1, u1: 1, m2: 0.1, u2: 0, phase: 'idle', x1: -0.55, x2: 0, v1: 0, v2: 0, t: 0, rows: [], after: null, slow: false, hitT: 0 };
+  const S = { mode: 'elastic', m1: 0.1, u1: 1, m2: 0.1, u2: 0, phase: 'idle', x1: -0.55, x2: 0, v1: 0, v2: 0, t: 0, rows: [], cnt: trialCounter(), celebrated: false, after: null, slow: false, hitT: 0 };
   const E = { elastic: 1, partial: 0.5, stick: 0 };
   const NAME = { elastic: 'เด้ง (ยืดหยุ่น)', partial: 'เด้งบางส่วน', stick: 'ติดกันไป' };
   const BUMP = { elastic: 'band', partial: 'sponge', stick: 'clay' };
@@ -579,8 +597,9 @@ function buildAR1(root) {
 
   const tabs = document.querySelectorAll('#s1 .tabs button');
   const setMode = (m) => { S.mode = m; tabs.forEach((x) => x.classList.toggle('on', x.dataset.mode === m)); };
-  tabs.forEach((b) => b.onclick = () => { if (S.phase === 'run') return; setMode(b.dataset.mode); reset(); });
-  for (const id of ['m1', 'u1', 'm2', 'u2']) $(id).oninput = (e) => { if (S.phase === 'run') { e.target.value = S[id]; return; } S[id] = +e.target.value; reset(); };
+  const clearPreset = () => { S.preset = null; document.querySelectorAll('#c1Preset button').forEach((x) => x.classList.remove('on')); };
+  tabs.forEach((b) => b.onclick = () => { if (S.phase === 'run') return; clearPreset(); setMode(b.dataset.mode); reset(); });
+  for (const id of ['m1', 'u1', 'm2', 'u2']) $(id).oninput = (e) => { if (S.phase === 'run') { e.target.value = S[id]; return; } S[id] = +e.target.value; clearPreset(); reset(); };
   document.querySelectorAll('#c1Preset button').forEach((b) => b.onclick = () => {
     if (S.phase === 'run') return;
     Object.assign(S, { m1: 0.1, u1: 1, m2: 0.1, u2: 0 });
@@ -591,11 +610,11 @@ function buildAR1(root) {
   });
   $('c1Go').onclick = () => go(false);
   $('c1Slow').onclick = () => go(true);
-  $('c1Clr').onclick = () => { if (S.phase === 'run') return; S.rows = []; refreshTable(); reset(); };
+  $('c1Clr').onclick = () => { if (S.phase === 'run') return; S.rows = []; S.cnt.clear(); S.celebrated = false; refreshTable(); reset(); };
 
   function reset() {
     S.phase = 'idle'; S.t = 0; S.after = null; S.collided = false; S.hitT = 0;
-    S.x1 = -0.55; S.x2 = 0.05; S.v1 = S.u1; S.v2 = S.u2; S.nextFlash = 0; gh1.clear(); gh2.clear();
+    S.x1 = -0.55; S.x2 = 0.05; S.ua1 = S.u1; S.ua2 = S.u2; S.v1 = S.u1; S.v2 = S.u2; S.nextFlash = 0; gh1.clear(); gh2.clear();
     c1.userData.setBumper(BUMP[S.mode]); c2.userData.setBumper(S.mode === 'stick' ? 'clay' : null, true); c1.userData.squish(0); c2.userData.squish(0);
     const sc = (m) => 0.7 + (m - 0.05) * 2.4;   // รถหนักแสดงใหญ่ขึ้น
     c1.scale.setScalar(sc(S.m1)); c2.scale.setScalar(sc(S.m2));
@@ -606,10 +625,10 @@ function buildAR1(root) {
     $('c1Msg').textContent = '';
     info(); drawBars();
   }
-  const pB = () => S.m1 * S.u1 + S.m2 * S.u2, kB = () => ek(S.m1, S.u1) + ek(S.m2, S.u2);
+  const pB = () => S.m1 * S.ua1 + S.m2 * S.ua2, kB = () => ek(S.m1, S.ua1) + ek(S.m2, S.ua2);
   function info() {
     let s = '<span style="color:#ffd91a">m₁u₁ + m₂u₂ = m₁v₁ + m₂v₂     Ek = ½mv²</span><br>' +
-      `ก่อนชน  Σp = (${S.m1.toFixed(2)})(${sgn(S.u1)}) + (${S.m2.toFixed(2)})(${sgn(S.u2)}) = <b>${sgn(pB(), 3)}</b> kg·m/s   ΣEk = <b>${kB().toFixed(3)}</b> J<br>`;
+      `ก่อนชน  Σp = (${S.m1.toFixed(2)})(${sgn(S.ua1)}) + (${S.m2.toFixed(2)})(${sgn(S.ua2)}) = <b>${sgn(pB(), 3)}</b> kg·m/s   ΣEk = <b>${kB().toFixed(3)}</b> J<br>`;
     if (S.after) {
       const [v1, v2] = S.after, pa = S.m1 * v1 + S.m2 * v2, ka = ek(S.m1, v1) + ek(S.m2, v2), lost = kB() - ka;
       s += `หลังชน  v₁ = ${sgn(v1)}  v₂ = ${sgn(v2)} m/s   Σp = <b>${sgn(pa, 3)}</b>   ΣEk = <b>${ka.toFixed(3)}</b> J<br>`;
@@ -642,6 +661,8 @@ function buildAR1(root) {
     if (S.phase === 'run') return;
     reset();
     if (S.u1 <= S.u2) { $('c1Msg').innerHTML = '<span class="bad">รถคันที่ 1 ต้องเร็วกว่ารถคันที่ 2 จึงจะไล่ชนกันได้ ลองเพิ่ม u₁ หรือให้ u₂ ติดลบ</span>'; return; }
+    // แต่ละครั้งรถถูกผลักแรงไม่เท่ากันเป๊ะ ความเร็วจริงจึงแกว่งประมาณ ±4%
+    S.ua1 = S.u1 * jitter(0.04); S.ua2 = S.u2 === 0 ? 0 : S.u2 * jitter(0.04); S.v1 = S.ua1; S.v2 = S.ua2; info();
     S.slow = slow; S.phase = 'run'; Sound.vroom(0.6);
   }
   function collide() {
@@ -656,21 +677,32 @@ function buildAR1(root) {
     if (S.mode === 'elastic') Sound.tone(900, 0.15, 'sine', 0.15);
     info(); drawBars();
     $('c1Msg').innerHTML = '<span class="good">Σp ก่อนชน = Σp หลังชน (โมเมนตัมอนุรักษ์ทุกแบบ)</span>' + (S.mode === 'elastic' ? '<span class="good"> และ ΣEk คงตัว</span>' : '<span class="orange"> แต่ ΣEk ลดลง</span>');
-    S.rows.push({ p: S.preset || '', mode: NAME[S.mode], m1, u1: S.u1, m2, u2: S.u2, pb: pB(), kb: kB(), v1, v2, pa: m1 * v1 + m2 * v2, ka: ek(m1, v1) + ek(m2, v2) });
-    const done = {}; S.rows.forEach((r) => { if (r.p) done[r.p] = r; });
-    if (done['ก'] && done['ข'] && done['ค']) {
-      const loss = (r) => r.kb - r.ka;
-      $('c1Msg').innerHTML += `<br><span style="color:#ffd91a">ครบ ก ข ค แล้ว! พลังงานจลน์หายไป: ก ${loss(done['ก']).toFixed(3)} J  ข ${loss(done['ข']).toFixed(3)} J  ค ${loss(done['ค']).toFixed(3)} J → ชนแล้วติดกันไป (ข) เสียพลังงานจลน์มากที่สุด แต่ Σp ไม่เปลี่ยนเลยทั้ง 3 แบบ</span>`;
+    const key = S.preset ? 'P' + S.preset : [S.mode, S.m1, S.u1, S.m2, S.u2].join('|'), n = S.cnt.next(key);
+    S.rows.push({ key, n, p: S.preset || '', label: [S.preset || '', NAME[S.mode]], v: [m1, S.ua1, m2, S.ua2, pB(), kB(), v1, v2, m1 * v1 + m2 * v2, ek(m1, v1) + ek(m2, v2)] });
+    if (S.rows.length > 12) S.rows.shift();
+    if (n < 3) $('c1Msg').innerHTML += `<br><span style="color:#ffd91a">บันทึกครั้งที่ ${n} จาก 3 แล้ว ทำซ้ำค่าเดิมอีก ${3 - n} ครั้ง ระบบจะหาค่าเฉลี่ยให้</span>`;
+    else {
+      const g = S.rows.filter((r) => r.key === key).slice(-3), av = (i) => g.reduce((a, r) => a + r.v[i], 0) / g.length;
+      $('c1Msg').innerHTML += `<br><span style="color:#ffd91a">ครบ 3 ครั้ง! ค่าเฉลี่ย: Σp ก่อน ${av(4).toFixed(3)}  Σp หลัง ${av(8).toFixed(3)} kg·m/s   ΣEk ก่อน ${av(5).toFixed(3)}  ΣEk หลัง ${av(9).toFixed(3)} J</span>`;
+      Sound.ding();
+    }
+    // ครบภารกิจ ก ข ค (ภารกิจละ 3 ครั้ง) แล้วสรุปเทียบพลังงานที่หายไปจากค่าเฉลี่ย
+    const avgLoss = (p) => { const g = S.rows.filter((r) => r.p === p).slice(-3); return g.length === 3 ? Math.max(0, g.reduce((a, r) => a + r.v[5] - r.v[9], 0) / 3) : null; };
+    const L = { ก: avgLoss('ก'), ข: avgLoss('ข'), ค: avgLoss('ค') };
+    if (!S.celebrated && L.ก !== null && L.ข !== null && L.ค !== null) {
+      S.celebrated = true;
+      $('c1Msg').innerHTML += `<br><span style="color:#4ade80">ครบ ก ข ค ภารกิจละ 3 ครั้งแล้ว! พลังงานจลน์ที่หายไปเฉลี่ย: ก ${L.ก.toFixed(3)} J  ข ${L.ข.toFixed(3)} J  ค ${L.ค.toFixed(3)} J → ชนแล้วติดกันไป (ข) เสียพลังงานจลน์มากที่สุด แต่ Σp ก่อนและหลังเท่ากันทุกครั้ง</span>`;
       Sound.fanfare(); confetti();
     }
-    S.preset = null; document.querySelectorAll('#c1Preset button').forEach((x) => x.classList.remove('on'));
-    if (S.rows.length > 6) S.rows.shift();
     refreshTable();
   }
   function refreshTable() {
-    $('c1Table').innerHTML = '<tr><th>ภารกิจ</th><th>แบบ</th><th>m₁</th><th>u₁</th><th>m₂</th><th>u₂</th><th>Σp ก่อน</th><th>ΣEk ก่อน</th><th>v₁</th><th>v₂</th><th>Σp หลัง</th><th>ΣEk หลัง</th></tr>' +
-      (S.rows.length ? S.rows.map((r) => `<tr><td>${r.p}</td><td>${r.mode}</td><td>${r.m1.toFixed(2)}</td><td>${sgn(r.u1)}</td><td>${r.m2.toFixed(2)}</td><td>${sgn(r.u2)}</td><td>${sgn(r.pb, 3)}</td><td>${r.kb.toFixed(3)}</td><td>${sgn(r.v1)}</td><td>${sgn(r.v2)}</td><td class="good">${sgn(r.pa, 3)}</td><td class="${r.kb - r.ka > 0.0005 ? 'orange' : 'good'}">${r.ka.toFixed(3)}</td></tr>`).join('')
-        : '<tr><td colspan="12" class="muted">ยังไม่มีผล กดภารกิจย่อย ก ข ค หรือปรับค่าเองแล้วกด “เริ่มชน!”</td></tr>');
+    const cells = (v) => `<td>${v[0].toFixed(2)}</td><td>${sgn(v[1])}</td><td>${v[2].toFixed(2)}</td><td>${sgn(v[3])}</td><td>${sgn(v[4], 3)}</td><td>${v[5].toFixed(3)}</td><td>${sgn(v[6])}</td><td>${sgn(v[7])}</td><td>${sgn(v[8], 3)}</td><td>${v[9].toFixed(3)}</td>`;
+    $('c1Table').innerHTML = '<tr><th>ภารกิจ</th><th>แบบ</th><th>ครั้งที่</th><th>m₁</th><th>u₁</th><th>m₂</th><th>u₂</th><th>Σp ก่อน</th><th>ΣEk ก่อน</th><th>v₁</th><th>v₂</th><th>Σp หลัง</th><th>ΣEk หลัง</th></tr>' +
+      (S.rows.length ? withAverages(S.rows).map((r) => r.avg
+        ? `<tr style="${TRIAL_CSS}"><td>${r.label[0]}</td><td>${r.label[1]}</td><td>เฉลี่ย</td>${cells(r.v)}</tr>`
+        : `<tr><td>${r.label[0]}</td><td>${r.label[1]}</td><td>${r.n}</td>${cells(r.v)}</tr>`).join('')
+        : '<tr><td colspan="13" class="muted">ยังไม่มีผล กดภารกิจย่อย ก ข ค (ภารกิจละ 3 ครั้ง) หรือปรับค่าเองแล้วกด “เริ่มชน!” 3 ครั้ง</td></tr>');
   }
   function update(dt0) {
     let dt = dt0;
@@ -708,7 +740,7 @@ function buildAR1(root) {
 
 // ---------- AR 2 Explosion Lab ----------
 function buildAR2(root) {
-  const S = { m1: 0.2, m2: 0.1, E: 0.03, phase: 'idle', x1: 0, x2: 0, v1: 0, v2: 0, t: 0, rows: [], done: false };
+  const S = { m1: 0.2, m2: 0.1, E: 0.03, phase: 'idle', x1: 0, x2: 0, v1: 0, v2: 0, t: 0, rows: [], cnt: trialCounter(), Ea: 0.03, done: false };
   const L = 0.16, VS = 0.7;
   makeRail(root, 1.5); makeWall(root, -0.76); makeWall(root, 0.76);
   const c1 = makeCar(0x2f6fe0, L), c2 = makeCar(0xe76f51, L); root.add(c1, c2);
@@ -727,9 +759,9 @@ function buildAR2(root) {
   for (const [id, key] of [['em1', 'm1'], ['em2', 'm2'], ['eE', 'E']]) $(id).oninput = (e) => { if (S.phase === 'run') { e.target.value = S[key]; return; } S[key] = +e.target.value; reset(); };
   $('e2Preset').onclick = () => { if (S.phase === 'run') return; S.m1 = 0.2; S.m2 = 0.1; $('em1').value = 0.2; $('em2').value = 0.1; reset(); go(); };
   $('e2Go').onclick = go;
-  $('e2Clr').onclick = () => { if (S.phase === 'run') return; S.rows = []; refreshTable(); graph.clear(); reset(); };
+  $('e2Clr').onclick = () => { if (S.phase === 'run') return; S.rows = []; S.cnt.clear(); refreshTable(); graph.clear(); reset(); };
 
-  const pOut = () => Math.sqrt(2 * S.E * S.m1 * S.m2 / (S.m1 + S.m2));
+  const pOut = () => Math.sqrt(2 * S.Ea * S.m1 * S.m2 / (S.m1 + S.m2));
   function reset() {
     S.phase = 'idle'; S.t = 0; S.done = false; S.v1 = S.v2 = 0; S.nextFlash = 0.3; gh1.clear(); gh2.clear();
     const sc = (m) => 0.7 + (m - 0.05) * 2.4;
@@ -757,6 +789,7 @@ function buildAR2(root) {
     if (S.phase === 'run') return;
     graph.clear(); reset();
     S.phase = 'run'; S.t = 0;
+    S.Ea = S.E * jitter(0.06);   // สปริงถูกอัดแต่ละครั้งไม่เท่ากันเป๊ะ (พลังงานแกว่งประมาณ ±6%)
     S.s1 = graph.add('#33d9ff', ''); S.s2 = graph.add('#ffa94d', ''); S.sT = graph.add('#c77dff', '');
     Sound.tone(600, 0.1, 'square', 0.12);
   }
@@ -765,13 +798,18 @@ function buildAR2(root) {
     sparks.burst(0, 0.07, 0.3, 0.4); Sound.tone(300, 0.25, 'square', 0.15, 0, 1200); lPop.setText('ตัดด้าย! ปึ้ง!'); S.pop = 0.8;
     info();
     $('e2Msg').textContent = 'ลูกศรโมเมนตัมยาวเท่ากันแต่ทิศตรงข้าม แถบโมเมนตัมรวมอยู่ที่ศูนย์ตลอด ดูภาพแฟลชบนราง (ทุก 0.2 s): เงาของคันเบาห่างกันมากกว่า แปลว่าเร็วกว่า';
-    S.rows.push({ m1: S.m1, m2: S.m2, v1: S.v1, v2: S.v2, p1: S.m1 * S.v1, p2: S.m2 * S.v2, k: ek(S.m1, S.v1) + ek(S.m2, S.v2) });
-    if (S.rows.length > 5) S.rows.shift(); refreshTable();
+    const key = [S.m1, S.m2, S.E].join('|'), n = S.cnt.next(key);
+    S.rows.push({ key, n, v: [S.m1, S.m2, S.v1, S.v2, S.m1 * S.v1, S.m2 * S.v2, S.m1 * S.v1 + S.m2 * S.v2, ek(S.m1, S.v1) + ek(S.m2, S.v2)] });
+    if (S.rows.length > 9) S.rows.shift(); refreshTable();
+    const g = S.rows.filter((r) => r.key === key).slice(-3);
+    $('e2Msg').textContent += n < 3 ? `  (บันทึกครั้งที่ ${n} จาก 3 กดปล่อยซ้ำอีก ${3 - n} ครั้ง)` : `  ครบ 3 ครั้ง! ค่าเฉลี่ย v₁ = ${sgn(g.reduce((a, r) => a + r.v[2], 0) / 3, 3)}  v₂ = ${sgn(g.reduce((a, r) => a + r.v[3], 0) / 3, 3)} m/s  Σp = 0.000`;
+    if (n === 3) Sound.ding();
   }
   function refreshTable() {
-    $('e2Table').innerHTML = '<tr><th>m₁ (kg)</th><th>m₂ (kg)</th><th>v₁ (m/s)</th><th>v₂ (m/s)</th><th>p₁</th><th>p₂</th><th>Σp</th><th>ΣEk (J)</th></tr>' +
-      (S.rows.length ? S.rows.map((r) => `<tr><td>${r.m1.toFixed(2)}</td><td>${r.m2.toFixed(2)}</td><td>${sgn(r.v1, 3)}</td><td>${sgn(r.v2, 3)}</td><td>${sgn(r.p1, 3)}</td><td>${sgn(r.p2, 3)}</td><td class="good">${sgn(r.p1 + r.p2, 3)}</td><td class="orange">${r.k.toFixed(3)}</td></tr>`).join('')
-        : '<tr><td colspan="8" class="muted">ยังไม่มีผล กด “ภารกิจย่อย ง” หรือปรับมวลแล้วกด “ปล่อยสปริง!”</td></tr>');
+    const cells = (v) => `<td>${v[0].toFixed(2)}</td><td>${v[1].toFixed(2)}</td><td>${sgn(v[2], 3)}</td><td>${sgn(v[3], 3)}</td><td>${sgn(v[4], 3)}</td><td>${sgn(v[5], 3)}</td><td class="good">${sgn(v[6], 3)}</td><td class="orange">${v[7].toFixed(3)}</td>`;
+    $('e2Table').innerHTML = '<tr><th>ครั้งที่</th><th>m₁ (kg)</th><th>m₂ (kg)</th><th>v₁ (m/s)</th><th>v₂ (m/s)</th><th>p₁</th><th>p₂</th><th>Σp</th><th>ΣEk (J)</th></tr>' +
+      (S.rows.length ? withAverages(S.rows).map((r) => r.avg ? `<tr style="${TRIAL_CSS}"><td>เฉลี่ย</td>${cells(r.v)}</tr>` : `<tr><td>${r.n}</td>${cells(r.v)}</tr>`).join('')
+        : '<tr><td colspan="9" class="muted">ยังไม่มีผล กด “ภารกิจย่อย ง” หรือ “ปล่อยสปริง!” ให้ครบ 3 ครั้ง</td></tr>');
   }
   function update(dt) {
     if (S.phase === 'run') {
