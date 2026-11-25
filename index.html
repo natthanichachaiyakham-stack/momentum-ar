@@ -7,6 +7,27 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<script>
+// เปิดจาก LINE: สั่งให้ LINE เปิดลิงก์ในเบราว์เซอร์ของเครื่อง (กล้องใช้ได้แน่นอนกว่า)
+(function () { try {
+  var ua = navigator.userAgent || '';
+  if (/ Line\//i.test(ua) && !/openExternalBrowser=1/.test(location.search)) {
+    location.replace(location.href.split('#')[0] + (location.search ? '&' : '?') + 'openExternalBrowser=1');
+  }
+} catch (e) {} })();
+</script>
+<script>
+// เครื่องรุ่นเก่า: เติมคำสั่งวาดกรอบมุมมนที่ป้ายตัวเลขใช้
+if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+    r = Math.min(typeof r === 'number' ? r : (r && r[0]) || 0, w / 2, h / 2);
+    this.moveTo(x + r, y); this.arcTo(x + w, y, x + w, y + h, r); this.arcTo(x + w, y + h, x, y + h, r);
+    this.arcTo(x, y + h, x, y, r); this.arcTo(x, y, x + w, y, r); this.closePath(); return this;
+  };
+}
+</script>
+<!-- iPhone/Android รุ่นเก่าที่ยังไม่รองรับ import map -->
+<script async src="https://cdn.jsdelivr.net/npm/es-module-shims@1.8.3/dist/es-module-shims.js"></script>
 <script type="importmap">
 {
   "imports": {
@@ -117,6 +138,53 @@
   .check.done { background: #1f7a45; }
   .warn { color: var(--bad); font-weight: 600; }
 
+  /* ===== ส่วนเสริม: ทุกเครื่องเข้าได้ + ความรู้ ===== */
+  #start3dBtn { font: inherit; font-size: 19px; font-weight: 700; color: #fff; background: #3373e6;
+    border: 0; border-radius: 14px; padding: 12px 26px; cursor: pointer; }
+  #start3dBtn.hl { box-shadow: 0 0 0 4px #ffd91a; }
+  #start .modesNote { color: var(--muted); font-size: 14px; max-width: 26em; margin-top: -8px; }
+  #iab { display: none; max-width: 26em; background: #3a2a10; border: 2px solid #ffb020; border-radius: 14px;
+    padding: 12px 14px; font-size: 15px; line-height: 1.5; text-align: left; }
+  #iab b { color: #ffd91a; }
+  #iab .row2 { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  #iab button, #iab a { font: inherit; font-size: 15px; color: #fff; background: #4d5466; border: 0; border-radius: 10px;
+    padding: 8px 12px; text-decoration: none; cursor: pointer; }
+  #liteRow { color: var(--muted); font-size: 14px; display: flex; gap: 8px; align-items: center; }
+  #liteRow input { width: 20px; height: 20px; accent-color: #ffd91a; }
+  #tools { position: fixed; z-index: 21; left: 12px; top: calc(env(safe-area-inset-top, 0px) + 98px);
+    display: none; flex-direction: column; gap: 8px; }
+  #tools button { font: inherit; font-size: 15px; color: #fff; background: var(--panel); border: 2px solid rgba(255,217,26,0.6);
+    border-radius: 999px; padding: 6px 12px; cursor: pointer; text-align: left; }
+  #viewTabs { position: fixed; z-index: 22; top: calc(env(safe-area-inset-top, 0px) + 8px); left: 50%; transform: translateX(-50%);
+    display: none; gap: 6px; background: var(--panel); border-radius: 999px; padding: 5px; max-width: calc(100% - 16px); overflow-x: auto; }
+  #viewTabs button, #viewTabs a { font: inherit; font-size: 14px; color: #fff; background: var(--tab-off); border: 0; border-radius: 999px;
+    padding: 6px 9px; white-space: nowrap; cursor: pointer; text-decoration: none; flex: none; }
+  #viewTabs button.on { background: var(--tab-on); }
+  #hint3d { position: fixed; z-index: 21; left: 50%; top: 40%; transform: translate(-50%, -50%); pointer-events: none;
+    background: rgba(15,22,40,0.85); border-radius: 14px; padding: 10px 16px; font-size: 16px; display: none; transition: opacity 1s; text-align: center; }
+  #sheet { position: fixed; inset: 0; z-index: 40; display: none; background: rgba(5,10,20,0.6); align-items: flex-end; justify-content: center; }
+  #sheet.on { display: flex; }
+  #sheet .card { width: min(100%, 640px); max-height: 86vh; background: #18223a; border-radius: 18px 18px 0 0; display: flex; flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom, 0px); }
+  #sheet .sh { display: flex; align-items: center; gap: 8px; padding: 12px 14px 8px; border-bottom: 1px solid var(--line); }
+  #sheet .sh h3 { margin: 0; flex: 1; font-size: 19px; color: #ffd91a; }
+  #sheet .sh button { font: inherit; font-size: 15px; color: #fff; background: #4d5466; border: 0; border-radius: 10px; padding: 6px 10px; cursor: pointer; }
+  #shBody { overflow-y: auto; padding: 10px 14px 18px; -webkit-overflow-scrolling: touch; font-size: 16px; line-height: 1.6; }
+  .kc { background: #222e4b; border-radius: 14px; padding: 10px 12px; margin: 10px 0; }
+  .kc h4 { margin: 0 0 4px; font-size: 17px; color: #b3d9ff; display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+  .kc h4 button { font: inherit; font-size: 13px; color: #fff; background: #4d5466; border: 0; border-radius: 8px; padding: 3px 8px; cursor: pointer; flex: none; }
+  .kc .eq { display: block; text-align: center; font-size: 19px; color: #ffd91a; margin: 6px 0; }
+  .kc .tag { display: inline-block; font-size: 12px; color: #101729; background: #ffd91a; border-radius: 6px; padding: 0 6px; margin-right: 6px; }
+  .kc canvas { width: 100%; height: 190px; display: block; background: rgba(0,0,0,0.25); border-radius: 10px; margin: 6px 0; }
+  .kc .opts { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+  .kc .opts button { font: inherit; font-size: 14px; color: #fff; background: #4d5466; border: 0; border-radius: 8px; padding: 6px 9px; cursor: pointer; }
+  .kc .opts button.on { background: #3373e6; }
+  .steps div { opacity: 0; transform: translateY(6px); animation: stepIn 0.5s forwards; padding: 3px 0; }
+  @keyframes stepIn { to { opacity: 1; transform: none; } }
+  .why { background: #222e4b; border-left: 4px solid #ffd91a; border-radius: 10px; padding: 8px 12px; margin: 8px 0; }
+  .why b { color: #ffd91a; }
+  #toast { position: fixed; z-index: 45; left: 50%; bottom: 55vh; transform: translateX(-50%); background: rgba(15,22,40,0.95);
+    border: 2px solid #ffd91a; border-radius: 12px; padding: 8px 14px; font-size: 15px; display: none; max-width: 90vw; text-align: center; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -129,6 +197,10 @@
   <div class="markers"><span>A</span><span>B</span><span>C</span><span>D</span></div>
   <button id="startBtn">เปิดกล้อง</button>
   <div id="startMsg"></div>
+  <button id="start3dBtn">ดูแบบ 3 มิติ (ไม่ต้องใช้กล้อง)</button>
+  <div class="modesNote">ไม่มีบัตร ไม่ให้สิทธิ์กล้อง หรือใช้คอมพิวเตอร์/โปรเจกเตอร์ ให้กดปุ่มสีฟ้า ทดลองได้ครบทุกอย่าง</div>
+  <div id="iab"></div>
+  <label id="liteRow"><input type="checkbox" id="liteChk"> เครื่องช้าหรือร้อน: เปิดโหมดประหยัด</label>
   <div class="small">เมื่อเบราว์เซอร์ถาม ให้กด “อนุญาต” ใช้กล้อง</div>
 </div>
 
@@ -136,6 +208,11 @@
 <button id="slowBtn">🐢 ช้า</button>
 <button id="soundBtn">🔊</button>
 <canvas id="confetti"></canvas>
+<div id="tools"><button id="knowBtn">📘 ความรู้</button><button id="whyBtn">💡 วิธีคิด</button></div>
+<div id="viewTabs"></div>
+<div id="hint3d">ลากนิ้วเพื่อหมุน · บีบสองนิ้วเพื่อซูม<br>แตะปุ่มด้านบนเพื่อเปลี่ยนฉาก</div>
+<div id="toast"></div>
+<div id="sheet"><div class="card"><div class="sh"><h3 id="shTitle"></h3><button id="shSpeak">🔈 อ่านให้ฟัง</button><button id="shClose">✕</button></div><div id="shBody"></div></div></div>
 
 <div id="panel">
   <div class="head"><h2 id="panelTitle"></h2><button id="collapseBtn">ย่อ</button></div>
@@ -157,6 +234,8 @@
           <button class="btn go" id="momRec">บันทึกค่า</button>
           <button class="btn" id="momClr" style="flex:0.5">ล้างผล</button>
         </div>
+        <div class="row"><button class="btn" id="misBtn" style="background:#7c3aed">🎯 ภารกิจสุ่ม: ทำให้โมเมนตัมเท่ากัน</button></div>
+        <div class="info" id="misMsg"></div>
         <div class="info" id="momSummary"></div>
         <div class="muted" style="font-size:14px" id="momTitle"></div>
         <div class="tablewrap"><table id="momTable"></table></div>
@@ -214,6 +293,7 @@
         <button class="btn" id="wRough">ล้อฝืด (แรงเสียดทานมาก)</button>
       </div>
       <div class="info muted" id="cSetting"></div>
+      <div class="row"><button class="btn on" id="pairBtn">แสดงแรงคู่กิริยา–ปฏิกิริยา (ลูกศรม่วง/เขียว)</button></div>
       <div class="row">
         <button class="btn go" id="launchBtn">ปล่อยรถ!</button>
         <button class="btn" id="clearC" style="flex:0.5">ล้างผล</button>
@@ -244,7 +324,7 @@
 
 <script type="module">
 import * as THREE from 'three';
-import { MindARThree } from 'mindar-image-three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // ===== ตั้งค่าที่แก้ได้ =====
@@ -784,8 +864,61 @@ function buildSceneA(root) {
   };
   refreshBallTable();
 
+  // ----- ภารกิจสุ่ม: ทำให้โมเมนตัมเท่ากัน -----
+  const MIS = { on: false, done: 0 };
+  $('misBtn').onclick = () => {
+    for (let k = 0; k < 200; k++) {
+      const sm = 800 + 50 * Math.floor(Math.random() * 17), sv = 25 + Math.floor(Math.random() * 46), target = sm * sv;
+      const tv = 5 + Math.floor(Math.random() * 16), tm = Math.round(target / tv / 100) * 100;
+      if (tm < 1000 || tm > 12000 || Math.abs(tm * tv - target) > 0.005 * target) continue;
+      Object.assign(S, { truckM: tm, truckV: tv, sedanM: sm, sedanV: 10 });
+      $('tM').value = tm; $('tV').value = tv; $('sM').value = sm; $('sV').value = 10;
+      MIS.on = true; refreshMom();
+      $('misMsg').innerHTML = `🎯 <b>ภารกิจที่ ${MIS.done + 1}</b> รถบรรทุก ${N(tm)} kg วิ่ง ${tv} m/s มีโมเมนตัม ${N(tm * tv)} kg·m/s<br>ปรับ<b>ความเร็วรถเก๋ง</b> (มวล ${N(sm)} kg) ให้มีโมเมนตัมเท่ากัน ลองคำนวณก่อนเลื่อน!`;
+      Sound.tone(660, 0.15, 'triangle', 0.2); return;
+    }
+  };
+  const misCheck = () => {
+    if (!MIS.on) return;
+    const pT = S.truckM * S.truckV, pS = S.sedanM * S.sedanV;
+    if (pT > 1 && Math.abs(pT - pS) <= 0.02 * pT) {
+      MIS.on = false; MIS.done++;
+      $('misMsg').innerHTML = `<span class="good">🎉 สำเร็จ! ภารกิจผ่านแล้ว ${MIS.done} ข้อ</span> v = p ÷ m = ${N(pT)} ÷ ${N(S.sedanM)} ≈ ${(pT / S.sedanM).toFixed(1)} m/s รถเบาจึงต้องเร็วกว่ามาก กด 🎯 อีกครั้งเพื่อรับภารกิจใหม่`;
+      confetti(); Sound.fanfare();
+    }
+  };
+  for (const id of ['sV', 'sM', 'tV', 'tM']) $(id).addEventListener('input', misCheck);
+
+  // ----- ปุ่ม 💡 วิธีคิด -----
+  function explain() {
+    if (S.mode === 'mom') {
+      const pT = S.truckM * S.truckV, pS = S.sedanM * S.sedanV;
+      return W([`<b>ขั้น 1</b> สูตร p = mv (มวล kg × ความเร็ว m/s)`,
+        `<b>ขั้น 2</b> รถบรรทุก p = ${N(S.truckM)} × ${N(S.truckV)} = <b>${N(pT)} kg·m/s</b>`,
+        `<b>ขั้น 3</b> รถเก๋ง p = ${N(S.sedanM)} × ${N(S.sedanV)} = <b>${N(pS)} kg·m/s</b>`,
+        pT > 0 ? `<b>ขั้น 4</b> ถ้าอยากให้รถเก๋งมีโมเมนตัมเท่ารถบรรทุก v = p ÷ m = ${N(pT)} ÷ ${N(S.sedanM)} ≈ <b>${(pT / S.sedanM).toFixed(1)} m/s</b> (${N(pT / S.sedanM * 3.6)} km/h)` : 'รถบรรทุกหยุดนิ่ง โมเมนตัมเป็นศูนย์']);
+    }
+    if (S.mode === 'force') {
+      const r = S.runs[S.runs.length - 1];
+      const F = r ? r.F : 2000 * S.mul, m = r ? r.m : S.sedanM;
+      return (r ? '' : '<div class="why muted">ยังไม่ได้กด “ออกแรง!” จึงใช้ค่าที่ตั้งไว้แทน</div>') + W([
+        `<b>ขั้น 1</b> แรงลัพธ์ ΣF = ${N(F)} N กระทำนาน Δt = 3 s`,
+        `<b>ขั้น 2</b> การดล J = ΣF·Δt = ${N(F)} × 3 = <b>${N(F * 3)} N·s</b>`,
+        `<b>ขั้น 3</b> การดลเท่ากับการเปลี่ยนโมเมนตัม Δp = J = <b>${N(F * 3)} kg·m/s</b>`,
+        `<b>ขั้น 4</b> รถเริ่มจากหยุดนิ่ง v = Δp ÷ m = ${N(F * 3)} ÷ ${N(m)} = <b>${(F * 3 / m).toFixed(1)} m/s</b>`,
+        `<b>สรุป</b> ความชันกราฟ p–t = Δp/Δt = ${N(F * 3)} ÷ 3 = ${N(F)} N = แรงลัพธ์พอดี`]);
+    }
+    const b = S.ball;
+    return W(['<b>ขั้น 1</b> กำหนดทิศขวาเป็นบวก ลูกบอล m = 0.5 kg',
+      '<b>ขั้น 2</b> p ก่อนชน = 0.5 × (+4) = +2 kg·m/s · p หลังชน = 0.5 × (−4) = −2 kg·m/s',
+      '<b>ขั้น 3</b> Δp = p หลัง − p ก่อน = (−2) − (+2) = <b>−4 kg·m/s</b> (ขนาด 4)',
+      `<b>ขั้น 4</b> ผนังแข็ง Δt = ${HARD_DT} s → F = 4 ÷ ${HARD_DT} = <b>${N(4 / HARD_DT)} N</b>`,
+      `<b>ขั้น 5</b> ผนังนุ่ม Δt = ${SOFT_DT} s → F = 4 ÷ ${SOFT_DT} = <b>${N(4 / SOFT_DT)} N</b>`,
+      `<b>สรุป</b> Δp เท่ากัน แต่เวลาชนนานขึ้น ${SOFT_DT / HARD_DT} เท่า แรงจึงลดลง ${SOFT_DT / HARD_DT} เท่า` + (b.done.hard && b.done.soft ? '' : ' (ลองปล่อยลูกบอลทั้งสองแบบ)')]);
+  }
+
   setMode('mom');
-  return { update, onShow: () => { if (S.mode === 'force') graph.draw(); if (S.mode === 'ball') ballGraph.draw(); } };
+  return { update, explain, onShow: () => { if (S.mode === 'force') graph.draw(); if (S.mode === 'ball') ballGraph.draw(); } };
 }
 
 // ---------- ฉาก B: แบบทดสอบ ----------
@@ -1034,6 +1167,7 @@ function buildSceneC(root) {
           (thrust(S.simT) > 0 ? '   (ลมกำลังพ่น)' : '   (ลมหมด รถค่อย ๆ ช้าลง)');
       }
     } else { forceArrow.visible = false; forceLabel.setText(''); }
+    drawPair();
     for (let i = puffs.length - 1; i >= 0; i--) {
       const p = puffs[i], d = p.userData;
       d.age += dt;
@@ -1046,8 +1180,36 @@ function buildSceneC(root) {
     }
   }
 
+  // ----- แรงคู่กิริยา–ปฏิกิริยา -----
+  const airArrow = makeArrow(0xc77dff), reArrow = makeArrow(0x4ade80);
+  const airLab = makeLabel('#c77dff', 0.5), reLab = makeLabel('#4ade80', 0.5);
+  root.add(airArrow, reArrow, airLab, reLab);
+  let showPair = true;
+  $('pairBtn').onclick = () => { showPair = !showPair; $('pairBtn').classList.toggle('on', showPair); };
+  function drawPair() {
+    const Th = S.running ? thrust(S.simT) : 0, cx = car.position.x;
+    if (!showPair || Th <= 0) { airArrow.visible = reArrow.visible = false; airLab.setText(''); reLab.setText(''); return; }
+    const len = Th / 0.2 * 0.16;
+    airArrow.setTo(cx - 0.115, 0.045, 0.02, -len, 0.008);
+    reArrow.setTo(cx - 0.07, 0.115, 0.02, len, 0.008);
+    airLab.position.set(cx - 0.2, 0.09, 0.12); airLab.setText(`รถดันอากาศไปข้างหลัง ${F3(Th)} N`);
+    reLab.position.set(cx + 0.05, 0.155, 0.12); reLab.setText(`อากาศดันรถไปข้างหน้า ${F3(Th)} N`);
+  }
+  function explain() {
+    const m = S.massG / 1000, fr = mu() * m * g, F0 = thrustF0[S.size];
+    const last = S.results[S.results.length - 1];
+    const L = [`<b>ขั้น 1</b> มวลรถ ${S.massG} g = ${F3(m)} kg · แรงเสียดทาน f = μmg = ${mu()} × ${F3(m)} × 9.81 = <b>${F3(fr)} N</b>`,
+      `<b>ขั้น 2</b> แรงจากลมสูงสุด ${F2(F0)} N ${F0 > fr ? `มากกว่าแรงเสียดทาน รถจึงออกตัวได้ · แรงลัพธ์ตอนเริ่ม ΣF = ${F2(F0)} − ${F3(fr)} = <b>${F3(F0 - fr)} N</b>` : '<span class="bad">น้อยกว่าแรงเสียดทาน รถจึงไม่ออกตัว</span>'}`,
+      `<b>ขั้น 3</b> ความเร่งตอนเริ่ม a = ΣF ÷ m = ${F3(Math.max(0, F0 - fr))} ÷ ${F3(m)} = <b>${F2(Math.max(0, F0 - fr) / m)} m/s²</b>`];
+    if (last && S.pMax > 0.0005) {
+      L.push(`<b>ขั้น 4</b> ครั้งล่าสุด p สูงสุด = <b>${F3(S.pMax)} kg·m/s</b> → ความเร็วสูงสุด v = p ÷ m = ${F3(S.pMax)} ÷ ${F3(m)} = <b>${F2(S.pMax / m)} m/s</b>`);
+      L.push(`<b>ขั้น 5</b> พื้นที่ใต้กราฟ ΣF–t ส่วนบวก = การดล J = ${F3(S.Jpos)} N·s ≈ p สูงสุด → <b>J = Δp</b>`);
+      if (S.t2 > 0) L.push(`<b>ขั้น 6</b> ช่วง 1–2 m ใช้เวลา ${F2(S.t2 - S.t1)} s → v เฉลี่ย = 1 ÷ ${F2(S.t2 - S.t1)} = <b>${F2(1 / (S.t2 - S.t1))} m/s</b>`);
+    } else L.push('<b>ขั้น 4</b> กด “ปล่อยรถ!” แล้วกด 💡 อีกครั้ง จะเห็นการคำนวณ p สูงสุด การดล และความเร็วเฉลี่ยจากผลจริง');
+    return W(L);
+  }
   resetCar(); refreshSetting(); refreshTable();
-  return { update, onShow: () => { graph.draw(); fGraph.draw(); } };
+  return { update, explain, onShow: () => { graph.draw(); fGraph.draw(); } };
 }
 
 // ---------- ฉาก D: คู่มือประกอบรถ ----------
@@ -1157,12 +1319,306 @@ $('collapseBtn').onclick = () => {
   if (!p.classList.contains('collapsed') && current >= 0) requestAnimationFrame(() => scenes[current].onShow());
 };
 
+// ===== แผน 1: การ์ดความรู้ (ปุ่ม 📘) =====
+const KNOW = [
+  [ // ฉาก A
+    { t: 'โมเมนตัมคืออะไร', h: `<span class="eq">p = mv</span>โมเมนตัม (p) คือ “ปริมาณการเคลื่อนที่” ของวัตถุ ได้จากมวล (kg) คูณความเร็ว (m/s) หน่วยจึงเป็น <b>kg·m/s</b><br>
+      วัตถุที่หยุดนิ่งมีโมเมนตัมเป็นศูนย์ แม้จะหนักมากก็ตาม และวัตถุเบาที่เร็วมากก็มีโมเมนตัมมากได้ เช่น กระสุนปืน` },
+    { t: 'ทำไมรถบรรทุกจึงหยุดยากกว่า', h: `ในฉากนี้ รถบรรทุก 8,000 kg วิ่ง 10 m/s มีโมเมนตัม 8,000 × 10 = <b>80,000 kg·m/s</b><br>
+      รถเก๋ง 1,200 kg ต้องวิ่งเร็วถึง 80,000 ÷ 1,200 ≈ <b>66.7 m/s (240 km/h)</b> จึงจะมีโมเมนตัมเท่ากัน<br>
+      ถ้าเบรกด้วยแรงเท่ากัน 20,000 N เวลาที่ใช้หยุด Δt = Δp ÷ F → รถบรรทุก 4 s แต่รถเก๋งที่วิ่ง 10 m/s ใช้เพียง 0.6 s รถที่มีโมเมนตัมมากจึงหยุดยากกว่า` },
+    { t: 'โมเมนตัมเป็นปริมาณเวกเตอร์', h: `โมเมนตัมมีทั้งขนาดและทิศเหมือนความเร็ว ต้องกำหนดทิศบวกก่อนเสมอ เช่น ทางขวาเป็นบวก<br>
+      ลูกบอล 0.5 kg วิ่งไปทางขวา 4 m/s → p = <b>+2</b> kg·m/s แล้วเด้งกลับ 4 m/s → p = <b>−2</b> kg·m/s<br>
+      Δp = p หลัง − p ก่อน = (−2) − (+2) = <b>−4 kg·m/s</b> ไม่ใช่ศูนย์! เพราะลูกบอลต้องหยุดแล้วยังต้องวิ่งกลับอีก ผนังจึงต้องออกแรงมาก` },
+    { t: 'ที่มาของสูตร ΣF = Δp / Δt', h: `<div class="steps">
+      <div>เริ่มจากกฎข้อที่ 2 ของนิวตัน  <b>ΣF = ma</b></div>
+      <div>ความเร่ง คือ ความเร็วที่เปลี่ยนไปต่อเวลา  <b>a = (v − u) / Δt</b></div>
+      <div>แทนค่า a  →  <b>ΣF = m(v − u) / Δt</b></div>
+      <div>กระจาย m  →  <b>ΣF = (mv − mu) / Δt</b></div>
+      <div>mv คือโมเมนตัมหลัง mu คือโมเมนตัมก่อน  →  <b>ΣF = Δp / Δt</b></div>
+      <div>ย้าย Δt ไปคูณ  →  <b class="good">ΣF·Δt = Δp</b>  เรียก ΣF·Δt ว่า <b>การดล (J)</b></div></div>
+      <span class="noread">แตะ 🔈 เพื่อฟังทีละขั้น</span>` },
+    { t: 'ความชันของกราฟ p–t คือแรงลัพธ์', h: `ในแท็บ “ออกแรง” กราฟโมเมนตัม–เวลาเป็นเส้นตรง เพราะแรงคงที่<br>
+      ความชัน = Δp / Δt = ΣF → แรง 2,000 N กราฟชัน 2,000 ทุก 1 วินาที ถ้าแรง 2 เท่า กราฟชันขึ้น 2 เท่า<br>
+      ส่วนมวลรถไม่เปลี่ยนความชัน! รถเบาและรถหนักได้ Δp เท่ากัน แต่รถเบาได้ความเร็วมากกว่า (v = Δp/m)` },
+    { t: 'ระวังสับสน: โมเมนตัม กับ พลังงานจลน์', h: `<span class="eq">p = mv     Ek = ½mv²</span>
+      ถ้าความเร็วเพิ่มเป็น 3 เท่า → โมเมนตัมเพิ่ม <b>3 เท่า</b> แต่พลังงานจลน์เพิ่ม <b>9 เท่า</b><br>
+      โมเมนตัมเป็นเวกเตอร์ (มีทิศ ติดลบได้) ส่วนพลังงานจลน์เป็นสเกลาร์ (ไม่มีทิศ ไม่ติดลบ)` },
+    { t: 'รู้หรือไม่: ตีลูกตามไปให้สุด', h: `นักกอล์ฟ นักเทนนิส และนักแบดมินตันจะ “ตีตามลูก” (follow-through) ให้ไม้สัมผัสลูกนานขึ้น<br>
+      การดล J = F·Δt มากขึ้น ลูกจึงได้โมเมนตัม (Δp) มากขึ้นและพุ่งไปเร็วกว่า` },
+  ],
+  [ // ฉาก B
+    { t: 'สรุปสูตรก่อนทำข้อสอบ', h: `<span class="eq">p = mv     J = ΣF·Δt = Δp     ΣF = Δp / Δt</span>
+      • หน่วยโมเมนตัม kg·m/s = หน่วยการดล N·s<br>• Δp = mv − mu (อย่าลืมเครื่องหมายเมื่อวัตถุเปลี่ยนทิศ)<br>
+      • แรงมากขึ้น → โมเมนตัมเปลี่ยนเร็วขึ้น     • เวลาชนนานขึ้น → แรงเฉลี่ยน้อยลง` },
+    { t: 'เทคนิคทำโจทย์ 4 ขั้น', h: `1) เขียนสิ่งที่โจทย์ให้ พร้อมหน่วย (แปลง g → kg, km/h → m/s ÷ 3.6)<br>2) กำหนดทิศบวก<br>3) เลือกสูตรที่มีตัวแปรครบ<br>4) แทนค่า คิดเลข แล้วตรวจหน่วยของคำตอบ` },
+  ],
+  [ // ฉาก C
+    { t: 'ลูกโป่งดันรถไปข้างหน้าได้อย่างไร', h: `ลูกโป่งบีบอากาศให้พุ่งออกทางหลอดไปข้างหลัง = <b>แรงกิริยา</b> ที่รถกระทำต่ออากาศ<br>
+      อากาศจึงดันรถกลับไปข้างหน้าด้วยแรงขนาดเท่ากันแต่ทิศตรงข้าม = <b>แรงปฏิกิริยา</b> (กฎข้อที่ 3 ของนิวตัน)<br>
+      ในฉากนี้ดูลูกศรคู่สีม่วงและสีเขียว ยาวเท่ากันเสมอ แต่กระทำต่อวัตถุคนละก้อน จึงไม่หักล้างกัน` },
+    { t: 'การดลจากลม = โมเมนตัมของรถ', h: `ขณะลมพ่น แรงลัพธ์บวกทำให้รถได้โมเมนตัมเพิ่ม พื้นที่ใต้กราฟ ΣF–t (ส่วนบวก) = การดล J = p สูงสุดของรถ<br>
+      เมื่อลมหมด เหลือแรงเสียดทานเป็นแรงลัพธ์ติดลบ โมเมนตัมจึงลดลงจนรถหยุด` },
+    { t: 'เคล็ดลับวิศวกร: ทำให้รถวิ่งไกล', h: `• ลดมวลรถ: แรงเท่าเดิม แต่รถเบาได้ความเร็วมากกว่า (v = J/m)<br>• ล้อลื่น เพลาขนาน: ลดแรงเสียดทานที่กินโมเมนตัม<br>
+      • ลูกโป่งใหญ่ พ่นนาน: การดล J = F·Δt มากขึ้น<br>• หัวฉีดตรงแนวรถ: แรงดันไปข้างหน้าเต็มที่ ไม่เสียไปด้านข้าง` },
+    { t: 'รู้หรือไม่: จรวดก็ใช้หลักเดียวกัน', h: `จรวดพ่นแก๊สร้อนออกด้านหลังด้วยความเร็วสูงมาก แก๊สจึงดันจรวดไปข้างหน้า<br>
+      จรวดไม่ได้ “ดันอากาศ” จึงบินได้แม้ในอวกาศที่ไม่มีอากาศ เหมือนรถลูกโป่งที่ถูกอากาศจากตัวเองดัน` },
+    { t: 'ทำไมต้องทดลองซ้ำ 3 ครั้ง', h: `ลูกโป่งที่สูบ “เท่ากัน” แต่ละครั้งยังมีแรงต่างกันเล็กน้อย ผลจึงแกว่ง<br>
+      การหาค่าเฉลี่ยจาก 3 ครั้ง (แถวสีทอง) ลดผลของความคลาดเคลื่อนแบบสุ่ม ทำให้เปรียบเทียบตัวแปรได้น่าเชื่อถือกว่า` },
+  ],
+  [ // ฉาก D
+    { t: 'จุดที่ทำให้รถเสียโมเมนตัม', h: `• <b>เพลาไม่ขนาน</b> รถเลี้ยวและล้อถูกพื้นด้านข้าง<br>• <b>ล้อเสียดสีตัวถัง</b> เกิดแรงเสียดทานเพิ่ม<br>• <b>หัวฉีดไม่ตรงแนว</b> แรงดันส่วนหนึ่งไปด้านข้าง<br>
+      ทั้งสามอย่างเพิ่มแรงที่ต้านการเคลื่อนที่ ทำให้โมเมนตัมลดลงเร็ว รถจึงวิ่งได้ใกล้ลง` },
+    { t: 'วัดความเร็วรถจริงแบบวิศวกร', h: `จับเวลาช่วง 1–2 เมตร แล้วคำนวณ v เฉลี่ย = 1 m ÷ เวลา<br>
+      จากนั้นหาโมเมนตัม p = m × v โดยชั่งมวลรถเป็นกิโลกรัม (เช่น 60 g = 0.060 kg) ทำ 3 ครั้งแล้วหาค่าเฉลี่ย` },
+  ],
+];
+const FORMULAS = [
+  '<div class="why"><b>p = mv</b> · <b>J = ΣF·Δt = Δp</b> · <b>ΣF = Δp/Δt</b></div>',
+  '<div class="why"><b>p = mv</b> · <b>J = ΣF·Δt = Δp</b> · <b>ΣF = Δp/Δt</b><br>ทำข้อสอบในแผงด้านล่าง แล้วดูคำอธิบายหลังตอบแต่ละข้อ</div>',
+  '<div class="why">กดปล่อยรถก่อน แล้วกด 💡 อีกครั้งเพื่อดูวิธีคิดจากผลจริง</div>',
+  '<div class="why">ฉากนี้เป็นคู่มือประกอบรถ ใช้สูตร v เฉลี่ย = ระยะทาง ÷ เวลา และ p = mv กับรถจริง</div>',
+];
+const W = (lines) => lines.map((l) => `<div class="why">${l}</div>`).join('');
+
+// =====================================================================
+// ส่วนเสริม: ให้ทุกเครื่องเข้าได้ (เปิดในแอป / ไม่มีกล้อง / เครื่องช้า / เน็ตอ่อน)
+// + แผ่นความรู้ ปุ่มดูวิธีคิด และอ่านให้ฟัง
+// =====================================================================
+const KIT = (() => {
+  const ua = navigator.userAgent || '';
+  const inApp = /Line\//i.test(ua) ? 'LINE' : /FBAN|FBAV|FB_IAB|FBIOS|FB4A/i.test(ua) ? 'Facebook' : /Messenger/i.test(ua) ? 'Messenger'
+    : /Instagram/i.test(ua) ? 'Instagram' : /TikTok|musical_ly|BytedanceWebview/i.test(ua) ? 'TikTok' : /MicroMessenger/i.test(ua) ? 'WeChat' : /Twitter/i.test(ua) ? 'X' : null;
+  const isAndroid = /Android/i.test(ua);
+  const isIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const camOK = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && window.isSecureContext !== false;
+  let lite = false;
+  try { lite = localStorage.getItem('arLite') === '1'; } catch (e) {}
+  if (!lite && navigator.deviceMemory && navigator.deviceMemory <= 2) lite = true;   // Android หน่วยความจำน้อย (เครื่องอื่นใช้การวัดความลื่นแทน)
+  let cfg = null, toastT = 0;
+
+  function toast(t, ms = 3500) {
+    const el = $('toast'); el.innerHTML = t; el.style.display = 'block';
+    clearTimeout(toastT); toastT = setTimeout(() => { el.style.display = 'none'; }, ms);
+  }
+  const pixelRatio = () => (lite ? 1 : Math.min(window.devicePixelRatio || 1, 2));
+  function applyLite(r) { if (r) r.setPixelRatio(pixelRatio()); }
+
+  // ตรวจความลื่น: ถ้าภาพกระตุกต่อเนื่อง เปิดโหมดประหยัดให้เอง
+  let acc = 0, frames = 0, warned = false;
+  function tick(raw, renderer) {
+    acc += raw; frames++;
+    if (acc >= 3) {
+      const fps = frames / acc; acc = 0; frames = 0;
+      if (fps < 20 && !lite && !warned) { warned = true; lite = true; applyLite(renderer); toast('เครื่องทำงานหนัก จึงเปิดโหมดประหยัดให้อัตโนมัติแล้ว ภาพจะลื่นขึ้น'); }
+    }
+  }
+
+  // ---------- อ่านให้ฟัง (เสียงภาษาไทยของเครื่อง) ----------
+  let voice = null;
+  const pickVoice = () => { try { const vs = speechSynthesis.getVoices(); voice = vs.find((v) => /^th/i.test(v.lang)) || null; } catch (e) {} };
+  if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+  function sayable(html) {
+    const d = document.createElement('div'); d.innerHTML = html.replace(/<br\s*\/?>/gi, '. ').replace(/<\/(div|p|li|h4)>/gi, '. ');
+    d.querySelectorAll('button, canvas, .noread').forEach((x) => x.remove());
+    let t = d.textContent;
+    const rep = [[/kg·m\/s/g, ' กิโลกรัมเมตรต่อวินาที'], [/N·s/g, ' นิวตันวินาที'], [/m\/s²/g, ' เมตรต่อวินาทีกำลังสอง'], [/km\/h/g, ' กิโลเมตรต่อชั่วโมง'], [/m\/s/g, ' เมตรต่อวินาที'],
+      [/Δ/g, 'เดลต้า '], [/Σ/g, 'ผลรวม '], [/½/g, 'ครึ่งหนึ่งของ '], [/²/g, ' กำลังสอง'], [/√/g, 'รากที่สองของ '], [/×/g, ' คูณ '], [/÷/g, ' หาร '],
+      [/ = /g, ' เท่ากับ '], [/=/g, ' เท่ากับ '], [/−/g, ' ลบ '], [/→/g, ' ดังนั้น '], [/≈/g, ' ประมาณ '], [/(\d) N\b/g, '$1 นิวตัน'], [/(\d) J\b/g, '$1 จูล'], [/(\d) kg\b/g, '$1 กิโลกรัม'],
+      [/(\d) g\b/g, '$1 กรัม'], [/(\d) s\b/g, '$1 วินาที'], [/(\d) m\b/g, '$1 เมตร'], [/[₁]/g, ' หนึ่ง'], [/[₂]/g, ' สอง'], [/[•·]/g, ' ']];
+    for (const [a, b] of rep) t = t.replace(a, b);
+    return t.replace(/\s+/g, ' ').trim();
+  }
+  function stopSpeak() { try { speechSynthesis.cancel(); } catch (e) {} }
+  function speak(html) {
+    if (!('speechSynthesis' in window)) { toast('เบราว์เซอร์นี้อ่านออกเสียงไม่ได้'); return; }
+    stopSpeak(); pickVoice();
+    const text = sayable(html);
+    if (!voice) toast('ถ้าไม่มีเสียง ให้ติดตั้งเสียงภาษาไทยในการตั้งค่าเครื่อง (การช่วยการเข้าถึง → เนื้อหาที่พูด)', 4500);
+    // แบ่งเป็นท่อนสั้น เพราะบางเครื่องตัดเสียงเมื่อข้อความยาว
+    const parts = [];
+    for (const seg of text.split(/[.!?]\s+/)) {
+      let rest = seg.trim();
+      while (rest.length > 140) { let cut = rest.lastIndexOf(' ', 140); if (cut < 40) cut = 140; parts.push(rest.slice(0, cut)); rest = rest.slice(cut).trim(); }
+      if (rest) parts.push(rest);
+    }
+    for (const p of parts) {
+      const u = new SpeechSynthesisUtterance(p); u.lang = 'th-TH'; if (voice) u.voice = voice; u.rate = 0.95;
+      speechSynthesis.speak(u);
+    }
+  }
+
+  // ---------- แผ่นความรู้ / วิธีคิด ----------
+  let sheetSay = '';
+  function openSheet(title, html, after) {
+    $('shTitle').textContent = title; $('shBody').innerHTML = html; $('shBody').scrollTop = 0; sheetSay = html;
+    $('sheet').classList.add('on');
+    $('shBody').querySelectorAll('[data-say]').forEach((b) => b.onclick = (e) => { e.stopPropagation(); speak(b.closest('.kc, .why').innerHTML); });
+    if (after) after($('shBody'));
+  }
+  function closeSheet() { $('sheet').classList.remove('on'); stopSpeak(); }
+
+  function showKnow() {
+    const i = cfg.getCur(), cards = (cfg.know[i] || []).concat(cfg.knowAll || []);
+    const html = cards.map((c, k) => `<div class="kc" data-k="${k}"><h4><span>${c.t}</span><button data-say>🔈</button></h4>${c.h}</div>`).join('');
+    openSheet('📘 ความรู้ · ' + cfg.names[i], html || '<p class="muted">ฉากนี้ยังไม่มีการ์ดความรู้</p>', (body) => {
+      cards.forEach((c, k) => { if (c.w) { try { c.w(body.querySelector(`.kc[data-k="${k}"]`)); } catch (e) { console.error(e); } } });
+    });
+  }
+  function showWhy() {
+    const i = cfg.getCur(), s = cfg.scenes[i];
+    let html = null;
+    try { html = s && s.explain ? s.explain() : null; } catch (e) { console.error(e); }
+    if (!html) html = cfg.formulas[i] || '<p class="muted">ฉากนี้ไม่มีการคำนวณ</p>';
+    openSheet('💡 วิธีคิด · ' + cfg.names[i], '<div class="steps">' + html + '</div>', (body) => {
+      body.querySelectorAll('.steps > *').forEach((el, k) => { el.style.animationDelay = (k * 0.35) + 's'; });
+    });
+  }
+
+  // ---------- หน้าเริ่มต้น ----------
+  function setupStart(c) {
+    cfg = c;
+    const chk = $('liteChk'); chk.checked = lite;
+    chk.onchange = () => { lite = chk.checked; try { localStorage.setItem('arLite', lite ? '1' : '0'); } catch (e) {} };
+    $('start3dBtn').onclick = () => { Sound.init(); cfg.start3D(); };
+    $('knowBtn').onclick = showKnow; $('whyBtn').onclick = showWhy;
+    $('shClose').onclick = closeSheet; $('sheet').onclick = (e) => { if (e.target.id === 'sheet') closeSheet(); };
+    $('shSpeak').onclick = () => speak(sheetSay);
+    if (inApp) {
+      const url = location.href.split('#')[0];
+      const intent = isAndroid ? `intent://${location.host}${location.pathname}${location.search}#Intent;scheme=https;package=com.android.chrome;end` : '';
+      $('iab').innerHTML = `<b>เปิดอยู่ในแอป ${inApp}</b> กล้องอาจเปิดไม่ได้<br>` +
+        (isIOS ? 'แตะ <b>⋯</b> หรือ <b>ไอคอนเข็มทิศ</b> แล้วเลือก <b>“เปิดใน Safari”</b>' : 'แตะ <b>⋮</b> มุมขวาบน แล้วเลือก <b>“เปิดในเบราว์เซอร์”</b> หรือกดปุ่มด้านล่าง') +
+        '<br>หรือกดปุ่มสีฟ้า “ดูแบบ 3 มิติ” ได้ทันที' +
+        `<div class="row2">${intent ? `<a href="${intent}">เปิดใน Chrome</a>` : ''}<button id="copyLink">คัดลอกลิงก์</button></div>`;
+      $('iab').style.display = 'block'; $('start3dBtn').classList.add('hl');
+      $('copyLink').onclick = async () => {
+        try { await navigator.clipboard.writeText(url); toast('คัดลอกลิงก์แล้ว ไปวางใน Safari หรือ Chrome'); }
+        catch (e) { prompt('คัดลอกลิงก์นี้ไปเปิดใน Safari หรือ Chrome', url); }
+      };
+    }
+    if (!camOK) {
+      $('startMsg').style.color = '#ffd91a';
+      $('startMsg').textContent = window.isSecureContext === false ? 'ต้องเปิดผ่านลิงก์ https จึงจะใช้กล้องได้ ระหว่างนี้ใช้ปุ่มสีฟ้าได้' : 'เบราว์เซอร์นี้เปิดกล้องผ่านเว็บไม่ได้ ใช้ปุ่มสีฟ้า “ดูแบบ 3 มิติ” ได้เลย';
+      $('start3dBtn').classList.add('hl');
+    }
+    if (/[?&]mode=3d/.test(location.search)) setTimeout(() => $('start3dBtn').click(), 50);
+  }
+  function camFailed() {
+    $('start3dBtn').classList.add('hl');
+    $('startMsg').textContent = 'เปิดกล้องไม่ได้ ตรวจว่ากด “อนุญาต” ใช้กล้องแล้วลองใหม่ หรือกดปุ่มสีฟ้า “ดูแบบ 3 มิติ” ใช้งานต่อได้ทันที';
+  }
+  function afterStart() { $('tools').style.display = 'flex'; }
+
+  // ---------- โหมด 3 มิติ (ไม่ใช้กล้อง) ----------
+  function make3D() {
+    const renderer = new THREE.WebGLRenderer({ antialias: !lite, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(pixelRatio()); renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.domElement.style.touchAction = 'none';
+    $('ar').appendChild(renderer.domElement);
+    const scene = new THREE.Scene(); scene.background = new THREE.Color(0x1a2440);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.6));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(0.5, 1, 1); scene.add(sun);
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(4, 64), new THREE.MeshStandardMaterial({ color: 0x26324f, roughness: 0.95 }));
+    floor.rotation.x = -Math.PI / 2; floor.position.y = -0.004; scene.add(floor);
+    const grid = new THREE.GridHelper(8, 40, 0x3d4d75, 0x2e3a5c); grid.position.y = -0.003; scene.add(grid);
+    const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.01, 100);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    Object.assign(controls, { enableDamping: true, maxPolarAngle: Math.PI * 0.495, minDistance: 0.25, maxDistance: 7, screenSpacePanning: true });
+    // กลุ่มแทน "บัตร marker" ที่วางราบบนโต๊ะ (แกน z ของบัตรชี้ขึ้น เหมือนใน AR)
+    function anchor(paper = true) {
+      const g = new THREE.Group(); g.rotation.x = -Math.PI / 2; scene.add(g);
+      if (paper) { const p = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.72), new THREE.MeshStandardMaterial({ color: 0xf3efe4, roughness: 1 })); p.position.z = -0.002; g.add(p); }
+      return g;
+    }
+    let lastPh = -1, W = innerWidth, H = innerHeight;
+    function fit(obj) {
+      scene.updateMatrixWorld(true);
+      const box = new THREE.Box3();
+      obj.traverseVisible((o) => { if ((o.isMesh || o.isSprite) && o.geometry && !o.userData.noFit) { if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld)); } });
+      if (box.isEmpty()) box.set(new THREE.Vector3(-0.5, 0, -0.4), new THREE.Vector3(0.5, 0.5, 0.4));
+      const c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3());
+      const vf = camera.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * camera.aspect);
+      const dW = (Math.max(s.x, 0.5) * 0.5 + 0.05) / Math.tan(hf / 2);
+      const dH = (Math.max(s.y, s.z * 0.5, 0.3) * 0.5 + 0.05) / Math.tan(vf / 2) * 1.6;
+      const d = Math.max(dW, dH, 0.6) * 1.08;
+      const dir = new THREE.Vector3(0, 0.55, 1).normalize();
+      controls.target.copy(c); camera.position.copy(c).addScaledVector(dir, d); controls.update();
+    }
+    function onResize() {
+      W = innerWidth; H = innerHeight; renderer.setSize(W, H); camera.aspect = W / H; camera.updateProjectionMatrix(); lastPh = -1;
+    }
+    window.addEventListener('resize', onResize);
+    function frame() {
+      const p = $('panel');
+      const ph = p.style.display !== 'none' && getComputedStyle(p).display !== 'none' && !p.classList.contains('collapsed') ? p.offsetHeight : 0;
+      if (ph !== lastPh) { lastPh = ph; if (ph > 0) camera.setViewOffset(W, H, 0, Math.min(ph * 0.5, H * 0.3), W, H); else camera.clearViewOffset(); }
+      controls.update();
+    }
+    const hint = $('hint3d'); hint.style.display = 'block'; hint.style.opacity = 1;
+    setTimeout(() => { hint.style.opacity = 0; }, 3500); setTimeout(() => { hint.style.display = 'none'; }, 4600);
+    renderer.domElement.addEventListener('pointerdown', () => { Sound.init(); }, { passive: true });
+    return { renderer, scene, camera, controls, anchor, fit, frame };
+  }
+
+  // ---------- เก็บไฟล์ไว้ในเครื่อง ให้เปิดได้แม้เน็ตอ่อน ----------
+  function registerSW(path, scope) {
+    if (!('serviceWorker' in navigator) || location.protocol !== 'https:') return;
+    window.addEventListener('load', () => { navigator.serviceWorker.register(path, { scope }).catch(() => {}); });
+  }
+
+  return { inApp, isIOS, isAndroid, camOK, get lite() { return lite; }, toast, tick, applyLite, speak, stopSpeak, openSheet, setupStart, camFailed, afterStart, make3D, registerSW };
+})();
+
+const BUILDERS = () => [buildSceneA, buildSceneB, buildSceneC, buildSceneD];
+const SHORT_NAMES = ['A โมเมนตัม', 'B ข้อสอบ', 'C รถลูกโป่ง', 'D ประกอบ'];
+const EXTRA_TABS = '';
+
+// ===== โหมด 3 มิติ (ไม่ใช้กล้อง): หลายฉาก เลือกที่แถบด้านบน =====
+async function start3D() {
+  $('start').style.display = 'none';
+  try { await document.fonts.load('600 64px Sarabun'); } catch (e) {}
+  const V = KIT.make3D();
+  const groups = [];
+  BUILDERS().forEach((b, i) => {
+    const g = V.anchor(); const root = new THREE.Group(); root.rotation.x = Math.PI / 2; g.add(root);
+    scenes[i] = b(root); g.visible = false; groups.push(g);
+  });
+  const tabs = $('viewTabs');
+  tabs.innerHTML = SHORT_NAMES.map((n, i) => `<button data-i="${i}">${n}</button>`).join('') + EXTRA_TABS + '<a href="./" title="กลับไปใช้กล้อง">📷</a>';
+  let touched = false;
+  V.renderer.domElement.addEventListener('pointerdown', () => { touched = true; });
+  function sel(i) {
+    groups.forEach((g, k) => { g.visible = k === i; });
+    tabs.querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.i === i));
+    showPanel(i); touched = false;
+    requestAnimationFrame(() => V.fit(groups[i]));
+    setTimeout(() => { if (!touched) V.fit(groups[i]); }, 1200);   // โมเดลรถโหลดเสร็จแล้วจัดมุมกล้องอีกครั้ง
+  }
+  tabs.querySelectorAll('button').forEach((b) => b.onclick = () => sel(+b.dataset.i));
+  tabs.style.display = 'flex';
+  $('slowBtn').style.display = 'block'; $('soundBtn').style.display = 'block';
+  KIT.afterStart();
+  sel(0);
+  const clock = new THREE.Clock();
+  V.renderer.setAnimationLoop(() => {
+    const raw = clock.getDelta(); KIT.tick(raw, V.renderer);
+    const dt = Math.min(raw, 0.05) * timeScale;
+    for (const s of scenes) s.update(dt);
+    V.frame(); V.renderer.render(V.scene, V.camera);
+  });
+}
+
 async function start() {
   $('startBtn').disabled = true;
   Sound.init();
   $('startMsg').style.color = '#9fb4d8';
   $('startMsg').textContent = 'กำลังเปิดกล้องและโหลดภาพ marker...';
   try { await document.fonts.load('600 64px Sarabun'); } catch (e) {}
+  let MindARThree;
+  try { ({ MindARThree } = await import('mindar-image-three')); }
+  catch (e) { $('startBtn').disabled = false; $('startMsg').style.color = ''; $('startMsg').textContent = 'โหลดระบบกล้อง AR ไม่สำเร็จ (เน็ตอาจช้า) กดลองใหม่ หรือใช้ปุ่มสีฟ้า'; KIT.camFailed(); console.error(e); return; }
 
   const mindar = new MindARThree({
     container: $('ar'),
@@ -1173,6 +1629,7 @@ async function start() {
     filterBeta: 0.001,
   });
   const { renderer, scene, camera } = mindar;
+  KIT.applyLite(renderer);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.6));
   const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(0.5, 1, 1); scene.add(sun);
@@ -1200,18 +1657,20 @@ async function start() {
   } catch (err) {
     $('startBtn').disabled = false;
     $('startMsg').style.color = '';
-    $('startMsg').textContent = 'เปิดกล้องไม่ได้ ตรวจว่าเปิดผ่านลิงก์ https และกดอนุญาตให้ใช้กล้องแล้ว จากนั้นลองใหม่';
+    $('startMsg').textContent = 'เปิดกล้องไม่ได้ ตรวจว่าเปิดผ่านลิงก์ https และกดอนุญาตให้ใช้กล้องแล้ว จากนั้นลองใหม่'; KIT.camFailed();
     console.error(err);
     return;
   }
   $('start').style.display = 'none';
+  KIT.afterStart();
   $('chip').style.display = 'flex';
   $('slowBtn').style.display = 'block';
   $('soundBtn').style.display = 'block';
 
   const clock = new THREE.Clock();
   renderer.setAnimationLoop(() => {
-    const dt = Math.min(clock.getDelta(), 0.05) * timeScale;
+    const raw = clock.getDelta(); KIT.tick(raw, renderer);
+    const dt = Math.min(raw, 0.05) * timeScale;
     for (const s of scenes) s.update(dt);
     renderer.render(scene, camera);
   });
@@ -1219,6 +1678,8 @@ async function start() {
 }
 
 $('startBtn').onclick = start;
+KIT.setupStart({ names: SCENE_NAMES, getCur: () => (current < 0 ? 0 : current), scenes, know: KNOW, formulas: FORMULAS, start3D });
+KIT.registerSW('./sw.js', './');
 </script>
 </body>
 </html>
