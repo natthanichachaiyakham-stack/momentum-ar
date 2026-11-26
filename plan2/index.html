@@ -488,9 +488,18 @@ const Sound = {
     try {
       if (navigator.audioSession) navigator.audioSession.type = 'playback';
       if (!this.ctx) {
-        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const comp = this.ctx.createDynamicsCompressor(); this.out = this.ctx.createGain(); this.out.gain.value = 1.8;
-        this.out.connect(comp); comp.connect(this.ctx.destination);
+        const c = this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        // สายสัญญาณเสียง: นุ่มด้วยตัวกรองเสียงแหลม + เสียงก้องเบา ๆ ให้ฟังสบายหู
+        const comp = c.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 3;
+        const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 5200; lp.Q.value = 0.5;
+        this.out = c.createGain(); this.out.gain.value = 1.4;
+        this.out.connect(lp); lp.connect(comp); comp.connect(c.destination);
+        try {
+          const len = Math.floor(c.sampleRate * 1.4), ir = c.createBuffer(2, len, c.sampleRate);
+          for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
+          const rev = c.createConvolver(); rev.buffer = ir; const wet = c.createGain(); wet.gain.value = 0.22;
+          lp.connect(rev); rev.connect(wet); wet.connect(comp);
+        } catch (e) {}
       }
       if (this.ctx.state !== 'running') this.ctx.resume();
       const b = this.ctx.createBuffer(1, 1, 22050), s = this.ctx.createBufferSource(); s.buffer = b; s.connect(this.ctx.destination); s.start(0);
@@ -503,33 +512,63 @@ const Sound = {
       const pr = this.tag.play(); if (pr && pr.catch) pr.catch(() => {});
     } catch (e) {}
   },
+  ready() { if (!this.on || !this.ctx) return false; if (this.ctx.state !== 'running') this.ctx.resume(); return true; },
+  // โน้ตเดี่ยว: มีช่วงเริ่มนุ่ม ๆ ไม่ใช้คลื่นเสียงแตก (square/sawtooth จะถูกเปลี่ยนเป็นเสียงนุ่ม)
   tone(freq, dur, type = 'sine', vol = 0.2, delay = 0, slideTo = 0) {
-    if (!this.on || !this.ctx) return;
-    if (this.ctx.state !== 'running') this.ctx.resume();
+    if (!this.ready()) return;
     const c = this.ctx, t = c.currentTime + delay, o = c.createOscillator(), g = c.createGain();
-    o.type = type; o.frequency.setValueAtTime(freq, t);
+    o.type = type === 'square' || type === 'sawtooth' ? 'triangle' : type;
+    o.frequency.setValueAtTime(freq, t);
     if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
-    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(this.out || c.destination); o.start(t); o.stop(t + dur + 0.02);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol * 0.8, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(this.out); o.start(t); o.stop(t + dur + 0.05);
   },
-  noise(dur, vol, freq, freqEnd, q = 1) {
-    if (!this.on || !this.ctx) return;
-    if (this.ctx.state !== 'running') this.ctx.resume();
+  // เสียงระฆังไม้แบบมาริมบา: ใส ก้องนิด ๆ ฟังสบาย
+  bell(freq, delay = 0, vol = 0.22, dur = 0.9) {
+    if (!this.ready()) return;
+    const c = this.ctx, t = c.currentTime + delay;
+    [[1, 1, dur], [3.9, 0.18, dur * 0.25], [9.2, 0.05, dur * 0.1]].forEach(([k, a, d]) => {
+      const o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(freq * k, t);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol * a, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      o.connect(g).connect(this.out); o.start(t); o.stop(t + d + 0.05);
+    });
+  },
+  noise(dur, vol, freq, freqEnd, q = 1, attack = 0.01, type = 'bandpass') {
+    if (!this.ready()) return;
     const c = this.ctx, t = c.currentTime, len = Math.floor(c.sampleRate * dur);
     const buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
-    src.buffer = buf; f.type = 'bandpass'; f.Q.value = q;
+    src.buffer = buf; f.type = type; f.Q.value = q;
     f.frequency.setValueAtTime(freq, t); f.frequency.exponentialRampToValueAtTime(freqEnd || freq, t + dur);
-    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    src.connect(f).connect(g).connect(this.out || c.destination); src.start(t);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + attack); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f).connect(g).connect(this.out); src.start(t);
   },
-  whoosh(dur) { this.noise(dur, 0.35, 1800, 500, 0.8); },
-  thud(hard) { if (hard) { this.tone(140, 0.12, 'triangle', 0.5, 0, 60); this.noise(0.05, 0.4, 3000); } else this.noise(0.3, 0.35, 300, 120, 0.7); },
-  ding() { this.tone(880, 0.18, 'sine', 0.25); this.tone(1320, 0.3, 'sine', 0.2, 0.1); },
-  buzz() { this.tone(180, 0.3, 'sawtooth', 0.12, 0, 120); },
-  fanfare() { [523, 659, 784, 1047].forEach((f, i) => this.tone(f, i === 3 ? 0.6 : 0.18, 'triangle', 0.25, i * 0.13)); },
-  vroom(dur) { this.tone(70, dur, 'sawtooth', 0.08, 0, 160); },
+  // ลมพ่นนุ่ม ๆ
+  whoosh(dur) { this.noise(dur, 0.16, 1100, 380, 0.7, Math.min(0.25, dur * 0.2)); },
+  // ชนของแข็ง = เสียงไม้เคาะ "ต๊อก" · ชนของนุ่ม = เสียง "ปุ"
+  thud(hard) {
+    if (hard) { this.tone(240, 0.16, 'sine', 0.45, 0, 120); this.bell(520, 0, 0.12, 0.25); this.noise(0.04, 0.08, 2200, 1500, 1.2, 0.002); }
+    else { this.tone(130, 0.22, 'sine', 0.35, 0, 70); this.noise(0.22, 0.12, 420, 160, 0.6, 0.02, 'lowpass'); }
+  },
+  // ตอบถูก: โน้ตสองตัวขึ้นไปแบบสดใส
+  ding() { this.bell(784, 0, 0.24); this.bell(1175, 0.11, 0.2, 1.1); },
+  // ตอบผิด: โน้ตต่ำลงสองตัวแบบนุ่ม ไม่แสบหู
+  buzz() { this.tone(392, 0.22, 'triangle', 0.16); this.tone(311, 0.4, 'triangle', 0.16, 0.16); },
+  // ผ่านด่าน: อาร์เพจจิโอโด–มี–ซอล–โด แล้วค้างเป็นคอร์ด
+  fanfare() {
+    [523, 659, 784, 1047].forEach((f, i) => this.bell(f, i * 0.12, 0.2, 0.6));
+    [523, 659, 784, 1047].forEach((f) => this.bell(f, 0.52, 0.12, 1.6));
+  },
+  // เสียงล้อหมุนเบา ๆ (ไม่ใช่เสียงเครื่องยนต์แผด)
+  vroom(dur) {
+    if (!this.ready()) return;
+    const c = this.ctx, t = c.currentTime, g = c.createGain(), f = c.createBiquadFilter();
+    f.type = 'lowpass'; f.frequency.value = 600;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.07, t + 0.15); g.gain.setValueAtTime(0.07, t + Math.max(0.2, dur - 0.3)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    g.connect(f).connect(this.out);
+    [0, 4].forEach((det) => { const o = c.createOscillator(); o.type = 'triangle'; o.frequency.setValueAtTime(95 + det, t); o.frequency.exponentialRampToValueAtTime(150 + det, t + dur); o.connect(g); o.start(t); o.stop(t + dur + 0.05); });
+  },
 };
 
 
@@ -1480,12 +1519,67 @@ const KIT = (() => {
     const d = document.createElement('div'); d.innerHTML = html.replace(/<br\s*\/?>/gi, '. ').replace(/<\/(div|p|li|h4)>/gi, '. ');
     d.querySelectorAll('button, canvas, .noread').forEach((x) => x.remove());
     let t = d.textContent;
-    const rep = [[/kg·m\/s/g, ' กิโลกรัมเมตรต่อวินาที'], [/N·s/g, ' นิวตันวินาที'], [/m\/s²/g, ' เมตรต่อวินาทีกำลังสอง'], [/km\/h/g, ' กิโลเมตรต่อชั่วโมง'], [/m\/s/g, ' เมตรต่อวินาที'],
-      [/Δ/g, 'เดลต้า '], [/Σ/g, 'ผลรวม '], [/½/g, 'ครึ่งหนึ่งของ '], [/²/g, ' กำลังสอง'], [/√/g, 'รากที่สองของ '], [/×/g, ' คูณ '], [/÷/g, ' หาร '],
-      [/ = /g, ' เท่ากับ '], [/=/g, ' เท่ากับ '], [/−/g, ' ลบ '], [/→/g, ' ดังนั้น '], [/≈/g, ' ประมาณ '], [/(\d) N\b/g, '$1 นิวตัน'], [/(\d) J\b/g, '$1 จูล'], [/(\d) kg\b/g, '$1 กิโลกรัม'],
-      [/(\d) g\b/g, '$1 กรัม'], [/(\d) s\b/g, '$1 วินาที'], [/(\d) m\b/g, '$1 เมตร'], [/[₁]/g, ' หนึ่ง'], [/[₂]/g, ' สอง'], [/[•·]/g, ' ']];
-    for (const [a, b] of rep) t = t.replace(a, b);
-    return t.replace(/\s+/g, ' ').trim();
+    t = t.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B50}\u{2B06}\u{2194}-\u{21FF}\u{FE0F}]/gu, ' ').replace(/\s*=\s*/g, ' = ').replace(/([A-Za-z])_([A-Z]) ([A-Za-z])_([A-Z])/g, '$1_$2 คูณ $3_$4').replace(/_/g, ' ของ ');
+    // 1) บอกชื่อสมการก่อนอ่านสมการ
+    const NAMES = [
+      [/m₁u₁ \+ m₂u₂ = m₁v₁ \+ m₂v₂/g, 'กฎการอนุรักษ์โมเมนตัม คือ '],
+      [/0 = m₁v₁ \+ m₂v₂/g, 'กฎการอนุรักษ์โมเมนตัมขณะดีดตัวแยก คือ '],
+      [/ΣF = Δp ?\/ ?Δt/g, 'กฎการเคลื่อนที่ข้อที่สองของนิวตันในรูปโมเมนตัม คือ '],
+      [/(^|[^Σ])(F = Δp ?\/ ?Δt)/g, 'แรงดลเฉลี่ย คือ ', 2],
+      [/J = Δp = F ?· ?Δt|J = F ?· ?Δt/g, 'การดล คือ '],
+      [/Δp = mv − mu|Δp = p หลัง − p ก่อน|Δp = m\(v − u\)/g, 'การเปลี่ยนโมเมนตัม คือ '],
+      [/(^|[^ΣΔA-Za-z])(p = mv)(?![₁₂])/g, 'สูตรโมเมนตัม คือ ', 2],
+      [/Ek = ½mv²/g, 'สูตรพลังงานจลน์ คือ '],
+      [/v = √\(2gh\)/g, 'สูตรความเร็วของวัตถุที่ตกจากที่สูง คือ '],
+    ];
+    for (const [re, name, grp] of NAMES) t = t.replace(re, (...a) => grp ? a[1] + name + a[2] : name + a[0]);
+    // 2) หน่วย
+    const UNITS = [[/kg·m\/s²/g, ' กิโลกรัมเมตรต่อวินาทีกำลังสอง'], [/kg·m\/s/g, ' กิโลกรัมเมตรต่อวินาที'], [/N·s/g, ' นิวตันวินาที'], [/m\/s²/g, ' เมตรต่อวินาทีกำลังสอง'],
+      [/km\/h/g, ' กิโลเมตรต่อชั่วโมง'], [/m\/s/g, ' เมตรต่อวินาที'], [/(\d) ?N(?![\w₁₂′])/g, '$1 นิวตัน'], [/(\d) J(?![\w₁₂′])/g, '$1 จูล'], [/(\d) ?kg\b/g, '$1 กิโลกรัม'],
+      [/(\d) g(?![\w₁₂′])/g, '$1 กรัม'], [/(\d) ?cm\b/g, '$1 เซนติเมตร'], [/(\d) s(?![\w₁₂′])/g, '$1 วินาที'], [/(\d) m(?![\w₁₂′])/g, '$1 เมตร'], [/(\d) ?%/g, '$1 เปอร์เซ็นต์'], [/(\d) ?°/g, '$1 องศา'],
+      [/\bkg\b/g, 'กิโลกรัม'], [/\bJ\b(?= *\))/g, 'จูล'], [/\(N\)/g, '(นิวตัน)'], [/\(s\)/g, '(วินาที)'], [/\(m\)/g, '(เมตร)'], [/\(g\)/g, '(กรัม)']];
+    for (const [a, b] of UNITS) t = t.replace(a, b);
+    // 3) อ่านตัวแปรเป็นชื่อปริมาณ เช่น p = โมเมนตัม, Δt = ช่วงเวลา, mv = มวลคูณความเร็ว
+    const VAR = { 'ΣEk': 'พลังงานจลน์รวม', 'Σp': 'โมเมนตัมรวม', 'ΣF': 'แรงลัพธ์', 'Σm': 'มวลรวม', 'Δp': 'การเปลี่ยนโมเมนตัม', 'Δt': 'ช่วงเวลา', 'Δv': 'การเปลี่ยนความเร็ว',
+      'F₁₂': 'แรงที่วัตถุที่หนึ่งกระทำต่อวัตถุที่สอง', 'F₂₁': 'แรงที่วัตถุที่สองกระทำต่อวัตถุที่หนึ่ง', 'Ek': 'พลังงานจลน์',
+      cos: 'โคไซน์', p: 'โมเมนตัม', m: 'มวล', f: 'แรงเสียดทาน', 'μ': 'สัมประสิทธิ์แรงเสียดทาน', d: 'ระยะยุบตัว', s: 'ระยะทาง', L: 'ความยาวสาย', 'θ': 'มุม', v: 'ความเร็ว', u: 'ความเร็วต้น', F: 'แรง', J: 'การดล', g: 'ความเร่งโน้มถ่วง', h: 'ความสูง', a: 'ความเร่ง', t: 'เวลา', E: 'พลังงาน', e: 'ความเด้ง', n: 'จำนวน' };
+    const KEYS = Object.keys(VAR).sort((x, y) => y.length - x.length);
+    const SUB = { '₁': 'ของวัตถุที่หนึ่ง', '₂': 'ของวัตถุที่สอง', '′': 'ใหม่' };
+    function speakRun(r) {
+      const out = []; let i = 0, prevOperand = false, ok = false;
+      const push = (w, operand) => { if (operand && prevOperand) out.push('คูณ'); out.push(w); prevOperand = operand; };
+      while (i < r.length) {
+        const ch = r[i];
+        const k = KEYS.find((key) => r.startsWith(key, i));
+        if (k) {
+          i += k.length; let w = VAR[k];
+          while (i < r.length && SUB[r[i]]) { w += SUB[r[i]]; i++; }
+          push(w, true); ok = true; continue;
+        }
+        const num = /^[0-9]+(\.[0-9]+)?/.exec(r.slice(i));
+        if (num) { push(num[0], true); i += num[0].length; continue; }
+        if (ch === '½') { push('ครึ่งหนึ่ง', true); i++; continue; }
+        if (ch === '√') { if (prevOperand) out.push('คูณ'); out.push('รากที่สองของ'); prevOperand = false; i++; continue; }
+        if (ch === '(') { if (prevOperand) out.push('คูณ'); prevOperand = false; i++; continue; }
+        if (ch === ')') { prevOperand = true; i++; if (r[i] === '²') { out.push('ทั้งหมดยกกำลังสอง'); i++; } continue; }
+        if (ch === '²') { out.push('กำลังสอง'); i++; continue; }
+        if (ch === '·') { out.push('คูณ'); prevOperand = false; i++; continue; }
+        if (ch === '/') { out.push('หารด้วย'); prevOperand = false; i++; continue; }
+        return null;   // มีตัวอักษรที่ไม่ใช่สัญลักษณ์ฟิสิกส์ เช่น คำภาษาอังกฤษ ให้อ่านตามเดิม
+      }
+      return ok ? ' ' + out.join(' ') + ' ' : null;
+    }
+    t = t.replace(/(?:[ΣΔ½√A-Za-z₁₂²()·/′μθ]|[0-9]+(?:\.[0-9]+)?)+/g, (r) => {
+      if (!/[A-Za-zμθ]/.test(r)) return r;
+      const sp = speakRun(r);
+      return sp === null ? r : sp;
+    });
+    // 4) เครื่องหมาย
+    const OPS = [[/\)\s*\(/g, ' คูณ '], [/(\d)\s*\((?=\s*[\d+−-])/g, '$1 คูณ '], [/(^|[\s(=])\+(?=\s*\d)/g, '$1 บวก '], [/ \/ /g, ' หารด้วย '], [/ \+ /g, ' บวก '], [/−/g, ' ลบ '], [/×/g, ' คูณ '], [/÷/g, ' หารด้วย '], [/(\d)\s*\/\s*(\d)/g, '$1 หารด้วย $2'],
+      [/ = /g, ' เท่ากับ '], [/=/g, ' เท่ากับ '], [/≈/g, ' ประมาณ '], [/∝/g, ' แปรผันตาม '], [/→/g, ' ดังนั้น '], [/≤/g, ' น้อยกว่าหรือเท่ากับ '], [/≥/g, ' มากกว่าหรือเท่ากับ '], [/[<]/g, ' น้อยกว่า '], [/[>]/g, ' มากกว่า '],
+      [/Δ/g, 'การเปลี่ยน '], [/Σ/g, 'ผลรวม '], [/½/g, 'ครึ่งหนึ่ง '], [/²/g, ' กำลังสอง'], [/√/g, 'รากที่สองของ '], [/[₁]/g, ' หนึ่ง'], [/[₂]/g, ' สอง'], [/[•·]/g, ' '], [/[()]/g, ' '], [/\//g, ' หารด้วย ']];
+    for (const [a, b] of OPS) t = t.replace(a, b);
+    return t.replace(/\s+/g, ' ').replace(/ \./g, '.').trim();
   }
   function stopSpeak() { try { speechSynthesis.cancel(); } catch (e) {} }
   function speak(html) {
@@ -1690,8 +1784,9 @@ const KIT = (() => {
     window.addEventListener('load', () => { navigator.serviceWorker.register(path, { scope }).catch(() => {}); });
   }
 
-  return { inApp, isIOS, isAndroid, camOK, get lite() { return lite; }, toast, tick, applyLite, speak, stopSpeak, openSheet, setupStart, camFailed, afterStart, make3D, registerSW };
+  return { inApp, isIOS, isAndroid, camOK, get lite() { return lite; }, toast, tick, applyLite, speak, stopSpeak, sayable, openSheet, setupStart, camFailed, afterStart, make3D, registerSW };
 })();
+window.__sayable = KIT.sayable;   // ใช้ทดสอบการอ่านสมการ
 
 const BUILDERS = () => [buildAR1, buildAR2, buildAR4, buildAR5];
 const SHORT_NAMES = ['AR-1 ชน', 'AR-2 ไข่ตก', 'AR-4 ทดสอบ', 'AR-5 ข้อสอบ'];
