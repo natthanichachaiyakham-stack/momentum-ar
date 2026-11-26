@@ -151,9 +151,9 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
     padding: 8px 12px; text-decoration: none; cursor: pointer; }
   #liteRow { color: var(--muted); font-size: 14px; display: flex; gap: 8px; align-items: center; }
   #liteRow input { width: 20px; height: 20px; accent-color: #ffd91a; }
-  #tools { position: fixed; z-index: 21; left: 12px; top: calc(env(safe-area-inset-top, 0px) + 98px);
-    display: none; flex-direction: column; gap: 8px; }
-  #tools button { font: inherit; font-size: 15px; color: #fff; background: var(--panel); border: 2px solid rgba(255,217,26,0.6);
+  #tools { position: fixed; z-index: 21; left: 64px; top: calc(env(safe-area-inset-top, 0px) + 54px);
+    display: none; flex-direction: row; gap: 6px; }
+  #tools button { font: inherit; font-size: 14px; color: #fff; background: var(--panel); border: 2px solid rgba(255,217,26,0.6);
     border-radius: 999px; padding: 6px 12px; cursor: pointer; text-align: left; }
   #viewTabs { position: fixed; z-index: 22; top: calc(env(safe-area-inset-top, 0px) + 8px); left: 50%; transform: translateX(-50%);
     display: none; gap: 6px; background: var(--panel); border-radius: 999px; padding: 5px; max-width: calc(100% - 16px); overflow-x: auto; }
@@ -185,6 +185,22 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
   .why b { color: #ffd91a; }
   #toast { position: fixed; z-index: 45; left: 50%; bottom: 55vh; transform: translateX(-50%); background: rgba(15,22,40,0.95);
     border: 2px solid #ffd91a; border-radius: 12px; padding: 8px 14px; font-size: 15px; display: none; max-width: 90vw; text-align: center; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
+  .chips button { font: inherit; font-size: 14px; color: #fff; background: var(--tab-off); border: 0; border-radius: 999px;
+    padding: 6px 11px; cursor: pointer; }
+  .chips button.on { background: var(--tab-on); box-shadow: 0 0 0 2px #b3d9ff inset; }
+  #sceneA .tabs { flex-wrap: wrap; }
+  #sceneA .tabs button { flex: 1 1 22%; font-size: 15px; padding: 8px 6px; }
+  @media (orientation: landscape) and (min-aspect-ratio: 5/4) {
+    #panel { left: auto; right: 0; transform: none; top: 0; bottom: 0; width: min(46vw, 440px); max-height: none;
+      border-radius: 18px 0 0 18px; padding-bottom: 0; }
+    #panel .body { padding-bottom: env(safe-area-inset-bottom, 8px); }
+    #slowBtn { right: calc(min(46vw, 440px) + 12px); }
+    #viewTabs, #chip { left: calc((100% - min(46vw, 440px)) / 2); max-width: calc(100% - min(46vw, 440px) - 16px); }
+    #toast { left: calc((100% - min(46vw, 440px)) / 2); bottom: 20vh; }
+    #hint3d { left: calc((100% - min(46vw, 440px)) / 2); }
+    #viewTabs { transform: translateX(-50%); }
+  }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
   .ar3 { display: block; max-width: 26em; text-decoration: none; color: #fff; background: rgba(255,217,26,0.12); border: 2px solid #ffd91a; border-radius: 14px; padding: 10px 14px; }
@@ -235,6 +251,9 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
         <button data-mode="bounce">ชนแล้วแยกกัน</button>
         <button data-mode="spring">ดีดตัวด้วยสปริง</button>
       </div>
+      <label class="sl">สถานการณ์ตัวอย่าง (กดแล้วลองทายผลก่อนกด “เริ่มชน!”)</label>
+      <div class="chips" id="c1Pre"></div>
+      <div class="info" id="c1Pred" style="display:none"></div>
       <label class="sl" id="m1Lab"></label><input type="range" id="m1" min="0.5" max="3" step="0.5" value="1">
       <div id="u1Row"><label class="sl" id="u1Lab"></label><input type="range" id="u1" min="0" max="3" step="0.5" value="2"></div>
       <label class="sl" id="m2Lab"></label><input type="range" id="m2" min="0.5" max="3" step="0.5" value="1">
@@ -251,8 +270,10 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
       <div class="tablewrap"><table id="c1Table"></table></div>
     </div>
 
-    <!-- AR-2 ไข่ตก: พื้นแข็ง vs ฟองน้ำ -->
+    <!-- AR-2 ไข่ตก: พื้นแข็ง vs วัสดุรองรับ -->
     <div class="scene" id="s2">
+      <label class="sl">วัสดุรองรับฝั่งขวา (เทียบกับพื้นแข็งฝั่งซ้าย)</label><div class="chips" id="e2Soft"></div>
+      <label class="sl">ความสูงที่ปล่อยไข่</label><div class="chips" id="e2H"></div>
       <div class="row">
         <button class="btn go" id="e2Go">ปล่อยไข่ทั้ง 2 ฟอง!</button>
         <button class="btn" id="e2Again" style="flex:0.6">ดูซ้ำ</button>
@@ -304,7 +325,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // ===== ตั้งค่าที่แก้ได้ =====
 const MODEL_YAW = Math.PI / 2;   // หมุนโมเดลรถ Kenney ให้หันไปทางขวา (ถ้ารถหันผิดทาง ลองเปลี่ยนเป็น -Math.PI / 2)
-const SCENE_NAMES = ['AR-1 Momentum Collision Lab', 'AR-2 ไข่ตก: พื้นแข็ง vs ฟองน้ำ', 'AR-4 Egg Drop Lab', 'AR-5 ด่านปลดล็อกงบประมาณ'];
+const SCENE_NAMES = ['AR-1 Momentum Collision Lab', 'AR-2 ไข่ตก: พื้นแข็ง vs วัสดุรองรับ', 'AR-4 Egg Drop Lab', 'AR-5 ด่านปลดล็อกงบประมาณ'];
 
 const $ = (id) => document.getElementById(id);
 const N = (x) => Math.round(x).toLocaleString('en-US');
@@ -335,12 +356,14 @@ function makeArrow(color) {
   return g;
 }
 
+const LBL_SCALE = 1.15;   // ขยายป้ายตัวเลขให้อ่านง่ายบนจอโทรศัพท์
 function makeLabel(color = '#ffffff', width = 0.55) {
   const c = document.createElement('canvas');
   c.width = 1024; c.height = 128;
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+  width *= LBL_SCALE;
   s.scale.set(width, width / 8, 1);
   s.renderOrder = 10;
   s.visible = false;
@@ -353,12 +376,14 @@ function makeLabel(color = '#ffffff', width = 0.55) {
     g.clearRect(0, 0, 1024, 128);
     if (!t) { s.visible = false; return; }
     s.visible = true;
-    g.font = '600 64px Sarabun, sans-serif';
-    const tw = Math.min(1010, g.measureText(t).width + 56);
-    g.fillStyle = 'rgba(15,22,40,0.85)';
-    g.beginPath(); g.roundRect((1024 - tw) / 2, 12, tw, 104, 30); g.fill();
+    let fs = 80; g.font = `600 ${fs}px Sarabun, sans-serif`;
+    const w0 = g.measureText(t).width;
+    if (w0 > 960) { fs = Math.max(40, Math.floor(fs * 960 / w0)); g.font = `600 ${fs}px Sarabun, sans-serif`; }
+    const tw = Math.min(1016, g.measureText(t).width + 48);
+    g.fillStyle = 'rgba(15,22,40,0.88)';
+    g.beginPath(); g.roundRect((1024 - tw) / 2, 6, tw, 116, 34); g.fill();
     g.fillStyle = col || color; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText(t, 512, 66);
+    g.fillText(t, 512, 68);
     tex.needsUpdate = true;
   };
   return s;
@@ -687,6 +712,28 @@ function buildAR1(root0) {
   }
   $('c1Go').onclick = go;
   $('c1Clr').onclick = () => { if (S.phase === 'run') return; S.rows = []; S.cnt.clear(); refreshTable(); reset(); };
+  // สถานการณ์ตัวอย่าง: ตั้งค่าให้อัตโนมัติ พร้อมคำถามให้ทายก่อน
+  const PRESETS = [
+    { n: 'ชนรถจอดแล้วติดกัน', mode: 'stick', m1: 1, u1: 2, m2: 1, u2: 0, q: 'ทายก่อน: หลังชนรถทั้งสองจะวิ่งไปด้วยความเร็วเท่าไร?', a: 'มวลรวมเพิ่มเป็น 2 เท่า ความเร็วจึงเหลือประมาณครึ่งหนึ่ง (≈ 1 m/s) แต่ Σp ยังเท่าเดิม' },
+    { n: 'มวลเท่ากัน ชนแล้วแยก', mode: 'bounce', m1: 1, u1: 2, m2: 1, u2: 0, q: 'ทายก่อน: หลังชนรถสีฟ้าจะเป็นอย่างไร?', a: 'มวลเท่ากันชนแบบยืดหยุ่น ความเร็วสลับกัน: สีฟ้าเกือบหยุดนิ่ง สีส้มวิ่งต่อด้วยความเร็วเดิม (เหมือนลูกตุ้มนิวตัน)' },
+    { n: 'รถเบาชนรถหนัก', mode: 'bounce', m1: 0.5, u1: 3, m2: 3, u2: 0, q: 'ทายก่อน: รถสีฟ้าที่เบากว่าจะเด้งกลับหรือไม่?', a: 'รถเบาเด้งกลับ (v₁ ติดลบ) แต่ Σp ก่อน = Σp หลัง เพราะรถหนักได้โมเมนตัมไปมากกว่าที่รถเบามีตอนแรก' },
+    { n: 'รถหนักชนรถเบา', mode: 'bounce', m1: 3, u1: 2, m2: 0.5, u2: 0, q: 'ทายก่อน: รถสีส้มที่เบากว่าจะพุ่งไปเร็วแค่ไหน?', a: 'รถเบาพุ่งไปเร็วเกือบ 2 เท่าของความเร็วรถหนักตอนแรก ส่วนรถหนักช้าลงเล็กน้อยแต่ยังวิ่งต่อ' },
+    { n: 'วิ่งสวนกันแล้วติดกัน', mode: 'stick', m1: 1, u1: 2, m2: 1, u2: -2, q: 'ทายก่อน: หลังชนติดกันจะวิ่งไปทางไหน?', a: 'Σp ก่อน = (1)(+2) + (1)(−2) ≈ 0 หลังชนติดกันจึงแทบหยุดนิ่งทั้งคู่' },
+    { n: 'ไล่ชนท้าย', mode: 'bounce', m1: 1, u1: 3, m2: 2, u2: 1, q: 'ทายก่อน: Σp ก่อนชนเท่าไร แล้วหลังชนจะเท่าเดิมไหม?', a: 'Σp ≈ (1)(3) + (2)(1) = 5 kg·m/s ทั้งก่อนและหลังชน' },
+    { n: 'คนกระโดดจากเรือ', mode: 'spring', m1: 1, m2: 3, J: 1.5, q: 'ทายก่อน: ถ้าคน (สีฟ้า 1 kg) ดีดออกจากเรือ (สีส้ม 3 kg) ใครเร็วกว่า?', a: 'การดลเท่ากันแต่ทิศตรงข้าม คนเบากว่า 3 เท่าจึงเร็วกว่า 3 เท่า Σp หลัง = 0 เท่าเดิม (เรือถอยหลัง)' },
+  ];
+  $('c1Pre').innerHTML = PRESETS.map((p, i) => `<button data-i="${i}">${p.n}</button>`).join('');
+  let preAns = null;
+  $('c1Pre').querySelectorAll('button').forEach((b) => b.onclick = () => {
+    if (S.phase === 'run') return;
+    const p = PRESETS[+b.dataset.i];
+    S.mode = p.mode; tabs.forEach((x) => x.classList.toggle('on', x.dataset.mode === p.mode));
+    for (const k of ['m1', 'u1', 'm2', 'u2']) if (p[k] !== undefined) { S[k] = p[k]; $(k).value = p[k]; }
+    if (p.J) { S.J = p.J; $('jS').value = p.J; }
+    $('c1Pre').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+    preAns = p.a; $('c1Pred').style.display = ''; $('c1Pred').innerHTML = `🤔 ${p.q}`;
+    reset();
+  });
 
   function before() { return S.mode === 'spring' ? [0, 0] : [S.m1 * S.ua1, S.m2 * S.ua2]; }
   function reset() {
@@ -743,6 +790,7 @@ function buildAR1(root0) {
   }
   function finishInfo() {
     info();
+    if (preAns) { $('c1Pred').innerHTML += `<br><span class="good">เฉลย: ${preAns}</span>`; preAns = null; }
     const b = before(), sb = b[0] + b[1], sa = S.m1 * S.after[0] + S.m2 * S.after[1];
     drawBars(b, [S.m1 * S.after[0], S.m2 * S.after[1]]);
     $('c1Msg').textContent = Math.abs(sb - sa) < 0.01 ? 'โมเมนตัมรวมก่อนชน = หลังชน (อนุรักษ์โมเมนตัม) รถคันหนึ่งได้โมเมนตัมเพิ่มเท่าไร อีกคันเสียไปเท่านั้น' : '';
@@ -824,13 +872,26 @@ function buildAR1(root0) {
   return { update, explain, onShow: () => drawBars(before(), S.after ? [S.m1 * S.after[0], S.m2 * S.after[1]] : null) };
 }
 
-// ---------- AR-2 ไข่ตก: พื้นแข็ง vs ฟองน้ำ ----------
+// ---------- AR-2 ไข่ตก: พื้นแข็ง vs วัสดุรองรับ ----------
 function buildAR2(root) {
-  const H = 0.9, DP = 0.38;   // 2 m ย่อเป็น 0.9 หน่วยฉาก, Δp ตามตัวอย่างในแผน
+  let H = 0.9, DP = 0.38, HM = 2;   // 2 m ย่อเป็น 0.9 หน่วยฉาก, Δp ตามตัวอย่างในแผน
+  const BREAK = 25;   // ถ้าแรงดลเฉลี่ยเกินประมาณนี้ ไข่แตก (ค่าประมาณสำหรับการจำลอง)
+  // วัสดุฝั่งขวา (Δt ประมาณ) ให้นักเรียนเลือกเทียบกับพื้นแข็ง
+  const SOFTS = [
+    { name: 'ฟองน้ำ', dt: 0.05, top: 0.12, c: 0xffd166, col: '#4ade80', scrub: true },
+    { name: 'หมอน', dt: 0.08, top: 0.14, c: 0xf1f5f9, col: '#33d9ff' },
+    { name: 'กองทราย', dt: 0.03, top: 0.08, c: 0xe9c46a, col: '#e9c46a' },
+    { name: 'กล่องกระดาษ', dt: 0.012, top: 0.08, c: 0xc8a165, col: '#ffa94d' },
+    { name: 'สนามหญ้า', dt: 0.008, top: 0.05, c: 0x4d7c0f, col: '#a3e635' },
+  ];
+  let soft = 0;
   const cases = [
     { name: 'พื้นแข็ง', x: -0.42, top: 0.04, dt: 0.002, col: '#ff4d4d', fill: 'rgba(255,77,77,0.35)', vis: 0.35 },
     { name: 'ฟองน้ำ', x: 0.42, top: 0.12, dt: 0.05, col: '#4ade80', fill: 'rgba(74,222,128,0.35)', vis: 1.5 },
   ];
+  const fmtF = (F) => F >= 50 ? F.toFixed(0) : F.toFixed(1);
+  const fmtDt = (d) => d < 0.01 ? d.toFixed(4) : d.toFixed(3);
+  const broke = (c) => DP / (c.dta || c.dt) > BREAK;
   const floor = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.04, 0.42), mat(0x8d99ae, { roughness: 0.9 }));
   floor.position.set(cases[0].x, 0.02, 0); root.add(floor);
   const sponge = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.12, 0.42), mat(0xffd166, { roughness: 1 }));
@@ -839,11 +900,36 @@ function buildAR2(root) {
   for (const c of cases) {
     c.egg = makeEgg(1.1); root.add(c.egg);
     c.splat = makeSplat(root);
-    makePole(root, c.x - 0.26, 0, c.top + H, 'สูง 2 m');
-    c.lab = makeLabel('#ffffff', 0.6); c.lab.position.set(c.x, c.top + H + 0.18, 0); root.add(c.lab);
+    c.lab = makeLabel('#ffffff', 0.6); root.add(c.lab);
     c.res = makeLabel(c.col, 0.62); c.res.position.set(c.x, 0.42, 0.12); root.add(c.res);
   }
+  let poles = [];
+  function applySetup() {
+    const S2 = SOFTS[soft], c = cases[1];
+    Object.assign(c, { name: S2.name, dt: S2.dt, top: S2.top, col: S2.col, fill: S2.col + '59', vis: Math.min(1.8, 0.5 + S2.dt * 16) });
+    H = 0.45 * HM; DP = +(0.06 * Math.sqrt(2 * 9.8 * HM)).toFixed(3);
+    sponge.material.color.set(S2.c); sponge.scale.y = S2.top / 0.12; sponge.position.y = S2.top / 2;
+    scrub.visible = !!S2.scrub;
+    for (const p of poles) for (const o of [p.pole, p.top, p.lab]) root.remove(o);
+    poles = cases.map((q) => makePole(root, q.x - 0.26, 0, q.top + H, `สูง ${HM} m`));
+    for (const q of cases) q.lab.position.set(q.x, q.top + H + 0.18, 0);
+    const fall = Math.sqrt(2 * HM / 9.8);
+    graph.tMax = Math.max(0.01, Math.ceil(Math.max(0.006, S2.dt * 1.15) / 0.01) * 0.01);
+    graph.tStep = graph.tMax <= 0.02 ? 0.005 : graph.tMax <= 0.06 ? 0.01 : 0.02;
+    graph.tFmt = (t) => t.toFixed(graph.tMax <= 0.02 ? 3 : 2);
+    const pk = DP / 0.002 * Math.PI / 2;
+    graph.pMax = Math.ceil(pk * 1.1 / 100) * 100; graph.pStep = graph.pMax / 4;
+    $('e2Soft').querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.i === soft));
+    $('e2H').querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.h === HM));
+    graph.clear(); reset(); drawArea();
+    if (window.refit3D) window.refit3D();
+    return fall;
+  }
   const graph = new Graph($('e2Graph'), { tMax: 0.06, tStep: 0.01, tFmt: (t) => t.toFixed(2), pMax: 320, pStep: 80, fmt: N, yLabel: 'แรงดล F (N)', maxSeries: 2 });
+  $('e2Soft').innerHTML = SOFTS.map((q, i) => `<button data-i="${i}">${q.name} Δt≈${q.dt} s</button>`).join('');
+  $('e2H').innerHTML = [1, 2, 3].map((h) => `<button data-h="${h}">${h} m</button>`).join('');
+  $('e2Soft').querySelectorAll('button').forEach((b) => b.onclick = () => { if (phase === 'run') return; soft = +b.dataset.i; applySetup(); });
+  $('e2H').querySelectorAll('button').forEach((b) => b.onclick = () => { if (phase === 'run') return; HM = +b.dataset.h; applySetup(); });
   let phase = 'idle', t = 0;
   const rows = [], cnt = trialCounter();
 
@@ -853,25 +939,28 @@ function buildAR2(root) {
       c.egg.visible = true; c.egg.position.set(c.x, c.top + H + 0.066, 0); c.state = 'fall'; c.ct = 0; c.splat.hide();
       c.dta = c.dt; c.lab.setText(`${c.name}  Δt ≈ ${c.dt} s`); c.res.setText(''); c.series = null;
     }
-    sponge.scale.y = 1; sponge.position.y = 0.06; scrub.position.set(cases[1].x, 0.135, 0); scrub.scale.y = 1;
+    const T1 = cases[1].top; sponge.scale.y = T1 / 0.12; sponge.position.y = T1 / 2; scrub.position.set(cases[1].x, T1 + 0.015, 0); scrub.scale.y = 1;
     info(false);
   }
   function info(done) {
+    const vv = Math.sqrt(2 * 9.8 * HM);
     let s = '<span style="color:#ffd91a">สูตร  v = √(2gh)   Δp = mv − mu   J = Δp = F·Δt   F = Δp / Δt</span><br>' +
-      'ไข่ m = 0.06 kg ตกจาก 2 m  v = √(2 × 9.8 × 2) ≈ 6.3 m/s  →  Δp ≈ 0.06 × 6.3 ≈ <b>0.38 kg·m/s</b> เท่ากันทั้ง 2 ฟอง<br>';
+      `ไข่ m = 0.06 kg ตกจาก ${HM} m  v = √(2 × 9.8 × ${HM}) ≈ ${vv.toFixed(1)} m/s  →  Δp ≈ 0.06 × ${vv.toFixed(1)} ≈ <b>${DP} kg·m/s</b> เท่ากันทั้ง 2 ฟอง<br>`;
     const [h, f] = cases, F = (c) => DP / c.dta;
-    if (done) s += `ครั้งนี้ พื้นแข็ง: Δt = ${h.dta.toFixed(4)} s  F = 0.38 / ${h.dta.toFixed(4)} ≈ <b class="bad">${F(h).toFixed(0)} N</b> ไข่แตก<br>ฟองน้ำ: Δt = ${f.dta.toFixed(3)} s  F = 0.38 / ${f.dta.toFixed(3)} ≈ <b class="good">${F(f).toFixed(1)} N</b> ไข่ไม่แตก`;
-    else s += 'กด “ปล่อยไข่ทั้ง 2 ฟอง!” ให้ครบ 3 ครั้ง ภาพจะช้าลงอัตโนมัติตอนไข่กระทบ';
+    const res = (c) => broke(c) ? `<b class="bad">${fmtF(F(c))} N</b> ไข่แตก` : `<b class="good">${fmtF(F(c))} N</b> ไข่ไม่แตก`;
+    if (done) s += `ครั้งนี้ พื้นแข็ง: Δt = ${fmtDt(h.dta)} s  F = ${DP} / ${fmtDt(h.dta)} ≈ ${res(h)}<br>${f.name}: Δt = ${fmtDt(f.dta)} s  F = ${DP} / ${fmtDt(f.dta)} ≈ ${res(f)}`;
+    else s += `กด “ปล่อยไข่ทั้ง 2 ฟอง!” ให้ครบ 3 ครั้ง ภาพจะช้าลงอัตโนมัติตอนไข่กระทบ<br><span class="muted">เกณฑ์ในการจำลอง: แรงดลเฉลี่ยเกินประมาณ ${BREAK} N ไข่แตก</span>`;
     $('e2Info').innerHTML = s;
-    $('e2Msg').textContent = done ? 'พื้นที่ใต้กราฟ (การดล) เท่ากัน แต่ยอดกราฟ (แรงดล) ต่างกันมาก ฟองน้ำยืดเวลาการชนประมาณ 25 เท่า แรงดลจึงลดลงประมาณ 25 เท่า' : '';
-    const cells = (v) => `<td>0.38</td><td>${v[0] < 0.01 ? v[0].toFixed(4) : v[0].toFixed(3)}</td><td>${v[1] >= 50 ? v[1].toFixed(0) : v[1].toFixed(1)}</td>`;
+    const ratio = h.dt ? f.dt / h.dt : 1;
+    $('e2Msg').textContent = done ? `พื้นที่ใต้กราฟ (การดล) เท่ากัน แต่ยอดกราฟ (แรงดล) ต่างกัน ${f.name}ยืดเวลาการชนประมาณ ${ratio.toFixed(0)} เท่า แรงดลจึงลดลงประมาณ ${ratio.toFixed(0)} เท่า` + (broke(f) ? ` แต่ยังเกิน ${BREAK} N ไข่จึงยังแตก ลองลดความสูงหรือเลือกวัสดุที่นุ่มกว่า` : '') : '';
+    const cells = (v) => `<td>${v[2]}</td><td>${fmtDt(v[0])}</td><td>${fmtF(v[1])}</td>`;
     $('e2Table').innerHTML = '<tr><th>พื้น</th><th>ครั้งที่</th><th>Δp (kg·m/s)</th><th>Δt (s)</th><th>F เฉลี่ย (N)</th><th>ผล</th></tr>' +
       (rows.length ? withAverages(rows).map((r) => r.avg ? `<tr style="${TRIAL_CSS}"><td>${r.label}</td><td>เฉลี่ย</td>${cells(r.v)}<td></td></tr>`
-        : `<tr><td>${r.label}</td><td>${r.n}</td>${cells(r.v)}<td class="${r.label === 'ฟองน้ำ' ? 'good' : 'bad'}">${r.label === 'ฟองน้ำ' ? 'ไม่แตก' : 'แตก'}</td></tr>`).join('')
+        : `<tr><td>${r.label}</td><td>${r.n}</td>${cells(r.v)}<td class="${r.v[1] > BREAK ? 'bad' : 'good'}">${r.v[1] > BREAK ? 'แตก' : 'ไม่แตก'}</td></tr>`).join('')
         : '<tr><td colspan="6" class="muted">ยังไม่มีผล ปล่อยไข่ให้ครบ 3 ครั้ง ระบบจะหาค่าเฉลี่ยให้ (แถวสีทอง)</td></tr>');
   }
   function record() {
-    for (const c of cases) rows.push({ key: c.name, label: c.name, n: cnt.next(c.name), v: [c.dta, DP / c.dta] });
+    for (const c of cases) { const key = c.name + '|' + HM; rows.push({ key, label: `${c.name} ${HM} m`, n: cnt.next(key), v: [c.dta, DP / c.dta, DP] }); }
     while (rows.length > 12) rows.shift();
     const n = rows[rows.length - 1].n;
     info(true); animateArea();
@@ -890,27 +979,27 @@ function buildAR2(root) {
     for (const c of cases) {
       if (c.state === 'fall') {
         allDone = false;
-        const y0 = c.top + H + 0.066, k = Math.min(1, t / 1.0);
+        const y0 = c.top + H + 0.066, k = Math.min(1, t / Math.sqrt(HM / 2));
         c.egg.position.y = y0 - H * k * k;
-        if (k >= 1) { c.state = 'hit'; c.ct = 0; c.series = graph.add(c.col, '', c.fill); if (c.dt < 0.01) { c.egg.visible = false; c.splat.burst(c.egg.position.clone(), 1.1); Sound.thud(true); } else Sound.thud(false); }
+        if (k >= 1) { c.state = 'hit'; c.ct = 0; c.series = graph.add(c.col, '', c.fill); if (broke(c)) { c.egg.visible = false; c.splat.burst(c.egg.position.clone(), 1.1); Sound.thud(true); } else Sound.thud(false); }
       } else if (c.state === 'hit') {
         allDone = false;
         c.ct += dt;
         const s = Math.min(1, c.ct / c.vis), Fpk = (DP / c.dta) * Math.PI / 2;
         c.series.pts.push([s * c.dta, Fpk * Math.sin(Math.PI * s)]);
-        if (c.dt >= 0.01) {
-          const sq = 0.07 * Math.sin(Math.PI * Math.min(s * 1.6, 0.5) * 1);   // ยุบลงแล้วค้างไว้
-          sponge.scale.y = (0.12 - sq) / 0.12; sponge.position.y = (0.12 - sq) / 2;
-          scrub.position.y = 0.12 - sq + 0.015;
-          c.egg.position.y = 0.12 - sq + 0.03 + 0.066;
+        if (c !== cases[0]) {
+          const T1 = c.top, sq = Math.min(T1 * 0.6, 0.012 + c.dt * 1.1) * Math.sin(Math.PI * Math.min(s * 1.6, 0.5) * 1);   // ยุบลงแล้วค้างไว้
+          sponge.scale.y = (T1 - sq) / 0.12; sponge.position.y = (T1 - sq) / 2;
+          scrub.position.y = T1 - sq + 0.015;
+          if (c.egg.visible) c.egg.position.y = T1 - sq + 0.03 + 0.066;
         }
         graph.draw();
         if (s >= 1) {
           c.state = 'done';
-          const Fa = DP / c.dta, Ft = Fa >= 50 ? Fa.toFixed(0) : Fa.toFixed(1);
+          const Fa = DP / c.dta, Ft = fmtF(Fa);
           c.series.pts.push([c.dta, 0]);
-          c.series.tag = { t: c.dta, p: c.dt < 0.01 ? 250 : 30, text: `${c.name}: F เฉลี่ย ≈ ${Ft} N` };
-          c.res.setText(c.dt < 0.01 ? `F ≈ ${Ft} N  ไข่แตก!` : `F ≈ ${Ft} N  ไข่ไม่แตก`);
+          c.series.tag = { t: c.dta, p: c === cases[0] ? graph.pMax * 0.78 : Math.max(graph.pMax * 0.12, Fa * 1.9), text: `${c.name}: F เฉลี่ย ≈ ${Ft} N` };
+          c.res.setText(broke(c) ? `F ≈ ${Ft} N  ไข่แตก!` : `F ≈ ${Ft} N  ไข่ไม่แตก`, c.col);
           graph.draw();
         }
       }
@@ -938,22 +1027,23 @@ function buildAR2(root) {
     };
     if (!done) { g.fillStyle = '#9fb4d8'; g.textAlign = 'left'; g.fillText('ปล่อยไข่ก่อน แล้วแถบเทียบพื้นที่และยอดแรงจะแสดงที่นี่', 4, h / 2); return; }
     g.fillStyle = '#ffd91a'; g.textAlign = 'left'; g.fillText('พื้นที่ใต้กราฟ = การดล J (เท่ากัน)', 4, 10);
-    bar(22, 'พื้นแข็ง', DP, DP, '#ff4d4d', '0.38 N·s'); bar(44, 'ฟองน้ำ', DP, DP, '#4ade80', '0.38 N·s');
+    bar(22, 'พื้นแข็ง', DP, DP, '#ff4d4d', `${DP} N·s`); bar(44, sp.name, DP, DP, sp.col, `${DP} N·s`);
     g.fillStyle = '#ffd91a'; g.fillText('ยอดแรงดลเฉลี่ย F (ต่างกันมาก)', 4, 76);
-    bar(88, 'พื้นแข็ง', Fh, Fh, '#ff4d4d', `${Fh.toFixed(0)} N`); bar(110, 'ฟองน้ำ', Fs, Fh, '#4ade80', `${Fs.toFixed(1)} N`);
+    bar(88, 'พื้นแข็ง', Fh, Fh, '#ff4d4d', `${fmtF(Fh)} N`); bar(110, sp.name, Fs, Fh, sp.col, `${fmtF(Fs)} N`);
   }
   function animateArea() { cancelAnimationFrame(areaRaf); const t0 = performance.now(); const f = () => { areaK = Math.min(1, (performance.now() - t0) / 1200); drawArea(); if (areaK < 1) areaRaf = requestAnimationFrame(f); }; f(); }
   function explain() {
     const done = rows.length > 0, [hd, sp] = cases;
-    const L = ['<b>ขั้น 1</b> ความเร็วไข่ก่อนกระทบ v = √(2gh) = √(2 × 9.8 × 2) ≈ <b>6.26 m/s</b>',
-      '<b>ขั้น 2</b> Δp = m(v − 0) = 0.06 × 6.26 ≈ <b>0.38 kg·m/s</b> เท่ากันทั้งสองฟอง (= พื้นที่ใต้กราฟ)'];
+    const vv = Math.sqrt(2 * 9.8 * HM);
+    const L = [`<b>ขั้น 1</b> ความเร็วไข่ก่อนกระทบ v = √(2gh) = √(2 × 9.8 × ${HM}) ≈ <b>${vv.toFixed(2)} m/s</b>`,
+      `<b>ขั้น 2</b> Δp = m(v − 0) = 0.06 × ${vv.toFixed(2)} ≈ <b>${DP} kg·m/s</b> เท่ากันทั้งสองฟอง (= พื้นที่ใต้กราฟ)`];
     const dh = done ? hd.dta : hd.dt, ds = done ? sp.dta : sp.dt;
-    L.push(`<b>ขั้น 3</b> พื้นแข็ง Δt ${done ? '' : '≈ '}${dh.toFixed(4)} s → F = 0.38 ÷ ${dh.toFixed(4)} ≈ <b class="bad">${(DP / dh).toFixed(0)} N</b>`);
-    L.push(`<b>ขั้น 4</b> ฟองน้ำ Δt ${done ? '' : '≈ '}${ds.toFixed(3)} s → F = 0.38 ÷ ${ds.toFixed(3)} ≈ <b class="good">${(DP / ds).toFixed(1)} N</b>`);
-    L.push(`<b>สรุป</b> เวลาชนนานขึ้น ${(ds / dh).toFixed(0)} เท่า แรงดลจึงลดลง ${(ds / dh).toFixed(0)} เท่า ไข่บนฟองน้ำจึงไม่แตก` + (done ? '' : ' (ตัวเลขนี้ใช้ค่าตั้งต้น ปล่อยไข่แล้วจะใช้ผลจริง)'));
+    L.push(`<b>ขั้น 3</b> พื้นแข็ง Δt ${done ? '' : '≈ '}${fmtDt(dh)} s → F = ${DP} ÷ ${fmtDt(dh)} ≈ <b class="bad">${fmtF(DP / dh)} N</b>`);
+    L.push(`<b>ขั้น 4</b> ${sp.name} Δt ${done ? '' : '≈ '}${fmtDt(ds)} s → F = ${DP} ÷ ${fmtDt(ds)} ≈ <b class="${DP / ds > BREAK ? 'bad' : 'good'}">${fmtF(DP / ds)} N</b>`);
+    L.push(`<b>สรุป</b> เวลาชนนานขึ้น ${(ds / dh).toFixed(0)} เท่า แรงดลจึงลดลง ${(ds / dh).toFixed(0)} เท่า ` + (DP / ds > BREAK ? `แต่ยังเกิน ${BREAK} N ไข่จึงแตก` : `ไข่บน${sp.name}จึงไม่แตก`) + (done ? '' : ' (ตัวเลขนี้ใช้ค่าตั้งต้น ปล่อยไข่แล้วจะใช้ผลจริง)'));
     return W(L);
   }
-  reset();
+  applySetup();
   return { update: slowUpdate, explain, onShow: () => { graph.draw(); drawArea(); } };
 }
 
@@ -986,7 +1076,7 @@ function buildAR4(root) {
   $('matRow').innerHTML = MATS.map((m, i) => `<button class="chip${m === S.mat ? ' on' : ''}" data-i="${i}">${m.name}${m.price ? ` (${m.price} บาท/${m.unit})` : m.id === 'paper' ? ' (ฟรี)' : ''}</button>`).join('');
   $('matRow').querySelectorAll('button').forEach((b) => b.onclick = () => { if (S.phase === 'run') return; S.mat = MATS[+b.dataset.i]; refresh(); });
   $('lay').oninput = (e) => { if (S.phase === 'run') { e.target.value = S.layers; return; } S.layers = +e.target.value; refresh(); };
-  document.querySelectorAll('#hRow button').forEach((b) => b.onclick = () => { if (S.phase === 'run') return; S.h = +b.dataset.h; refresh(); });
+  document.querySelectorAll('#hRow button').forEach((b) => b.onclick = () => { if (S.phase === 'run') return; S.h = +b.dataset.h; refresh(); if (window.refit3D) window.refit3D(); });
   $('d4Go').onclick = () => drop(false);
   $('d4Slow').onclick = () => { if (S.last) drop(true); };
   $('d4Clr').onclick = () => { if (S.phase === 'run') return; S.rows = []; S.cnt.clear(); S.last = null; graph.clear(); refreshTable(); refresh(); };
@@ -1131,6 +1221,26 @@ function buildAR5(root) {
       e: 'อนุรักษ์โมเมนตัม (2)(3) + (1)(0) = (2 + 1)v จึงได้ v = 2 m/s' },
   ];
   const CODES = ['EGG-0ZR', 'EGG-1MK', 'EGG-2TB', 'EGG-3HD', 'EGG-4QL', 'EGG-5VS'];
+  // คลังข้อฝึกเพิ่ม (โหมดฝึก ไม่นับงบประมาณ)
+  const EXTRA = [
+    { q: 'หน่วยของการดลคือข้อใด', c: ['N', 'N·s', 'N/s', 'J'], a: 1, e: 'J = F·Δt หน่วยจึงเป็น N·s ซึ่งเท่ากับ kg·m/s (หน่วยของโมเมนตัม)' },
+    { q: 'พื้นที่ใต้กราฟแรง–เวลา บอกปริมาณใด', c: ['งาน', 'กำลัง', 'การดล', 'ความเร่ง'], a: 2, e: 'พื้นที่ใต้กราฟ F–t = F·Δt = การดล = การเปลี่ยนโมเมนตัม' },
+    { q: 'ถุงลมนิรภัยในรถยนต์ช่วยลดอันตรายได้เพราะเหตุใด', c: ['ลดการเปลี่ยนโมเมนตัมของผู้โดยสาร', 'เพิ่มเวลาในการหยุด แรงดลเฉลี่ยจึงลดลง', 'ทำให้ผู้โดยสารมีมวลน้อยลง', 'ทำให้รถหยุดเร็วขึ้น'], a: 1, e: 'Δp ของผู้โดยสารเท่าเดิม แต่ถุงลมเพิ่ม Δt ตาม F = Δp/Δt แรงที่กระทำต่อร่างกายจึงลดลง' },
+    { q: 'นักกระโดดสูงตกลงบนเบาะหนา แทนการตกลงบนพื้น ข้อใดถูกต้อง', c: ['การดลเท่ากัน แต่แรงดลเฉลี่ยน้อยกว่า', 'การดลน้อยกว่า แรงดลเท่ากัน', 'การดลและแรงดลน้อยกว่าทั้งคู่', 'การดลมากกว่า แรงดลมากกว่า'], a: 0, e: 'ความเร็วก่อนกระทบและหยุดนิ่งเหมือนกัน Δp จึงเท่ากัน (การดลเท่ากัน) แต่เบาะยืดเวลา แรงดลจึงน้อยกว่า' },
+    { q: 'ลูกบอลมวล 0.2 kg ถูกเตะด้วยแรงเฉลี่ย 50 N นาน 0.02 s การดลเท่าใด', c: ['0.004 N·s', '1 N·s', '10 N·s', '2,500 N·s'], a: 1, e: 'J = F·Δt = 50 × 0.02 = 1 N·s' },
+    { q: 'จากข้อก่อน ถ้าลูกบอลเริ่มจากหยุดนิ่ง ความเร็วหลังถูกเตะเท่าใด', c: ['0.2 m/s', '1 m/s', '5 m/s', '10 m/s'], a: 2, e: 'Δp = J = 1 kg·m/s → v = Δp/m = 1 / 0.2 = 5 m/s' },
+    { q: 'กฎการอนุรักษ์โมเมนตัมใช้ได้เมื่อใด', c: ['เมื่อวัตถุชนแบบยืดหยุ่นเท่านั้น', 'เมื่อแรงภายนอกลัพธ์ที่กระทำต่อระบบเป็นศูนย์', 'เมื่อวัตถุมีมวลเท่ากัน', 'เมื่อไม่มีแรงภายในระบบ'], a: 1, e: 'ถ้าแรงภายนอกลัพธ์เป็นศูนย์ โมเมนตัมรวมของระบบคงตัว ไม่ว่าจะชนแบบใด' },
+    { q: 'รถ 1 kg วิ่ง 2 m/s ชนรถ 1 kg ที่วิ่งสวนมา 2 m/s แล้วติดกัน ความเร็วหลังชนเท่าใด', c: ['0 m/s', '1 m/s', '2 m/s', '4 m/s'], a: 0, e: 'Σp ก่อน = (1)(2) + (1)(−2) = 0 หลังชนติดกันจึงหยุดนิ่ง' },
+    { q: 'คนมวล 50 kg ยืนบนเรือมวล 100 kg ที่หยุดนิ่ง กระโดดขึ้นฝั่งด้วยความเร็ว 2 m/s เรือจะเคลื่อนที่อย่างไร', c: ['หยุดนิ่ง', 'ถอยหลัง 1 m/s', 'ถอยหลัง 2 m/s', 'ไปข้างหน้า 1 m/s'], a: 1, e: 'Σp ก่อน = 0 → (50)(2) + (100)v = 0 → v = −1 m/s เรือถอยหลัง 1 m/s' },
+    { q: 'การงอเข่าขณะกระโดดลงพื้นช่วยลดการบาดเจ็บ เพราะเหตุใด', c: ['ลดความเร็วก่อนถึงพื้น', 'เพิ่มเวลาในการหยุด แรงดลจึงลดลง', 'ลดมวลของร่างกาย', 'เพิ่มการเปลี่ยนโมเมนตัม'], a: 1, e: 'งอเข่าเพิ่ม Δt ขณะหยุด ทั้งที่ Δp เท่าเดิม แรงที่ข้อเข่าได้รับจึงน้อยลง' },
+  ];
+  const Q_MAIN = Q.slice(); let practice = false;
+  function startPractice() {
+    const pool = Q_MAIN.concat(EXTRA).slice();
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    Q.length = 0; pool.slice(0, 5).forEach((x, k) => Q.push({ ...x, q: `${k + 1}. ` + x.q.replace(/^\d+\.\s*/, '') }));
+    practice = true; idx = 0; score = 0; answered = false; render();
+  }
   const L = ['ก.', 'ข.', 'ค.', 'ง.'];
   let idx = 0, score = 0, answered = false;
 
@@ -1150,21 +1260,32 @@ function buildAR5(root) {
   let coinT = 0;
 
   function render() {
-    props.forEach((p, i) => p.visible = i === idx);
-    budgetLab.setText(`งบรวม ${20 + score * 2} บาท (เริ่มต้น 20 + ได้เพิ่ม ${score * 2})`);
+    props.forEach((p, i) => p.visible = !practice && i === idx);
+    budgetLab.setText(practice ? `โหมดฝึกเพิ่ม · ถูก ${score} ข้อ` : `งบรวม ${20 + score * 2} บาท (เริ่มต้น 20 + ได้เพิ่ม ${score * 2})`);
     const body = $('qBody');
     if (idx >= Q.length) {
+      if (practice) {
+        $('qHead').textContent = 'จบชุดฝึกเพิ่ม';
+        body.innerHTML = `<div class="score">${score} / ${Q.length} ข้อ</div><div class="info muted" style="text-align:center">โหมดฝึกไม่นับงบประมาณ</div>
+          <div class="row"><button class="btn" id="qPrac" style="background:#7c3aed">🎲 สุ่มชุดใหม่</button><button class="btn on" id="qBack">กลับไปด่านงบประมาณ</button></div>`;
+        $('qPrac').onclick = startPractice;
+        $('qBack').onclick = () => { Q.length = 0; Q.push(...Q_MAIN); practice = false; idx = 0; score = 0; answered = false; render(); };
+        if (score >= 4) { Sound.fanfare(); confetti(); }
+        return;
+      }
       $('qHead').textContent = 'ผ่านด่านแล้ว!';
       body.innerHTML = `<div class="score">${score} / ${Q.length} ข้อ</div>
         <div class="msg" style="text-align:center">ได้งบประมาณเพิ่ม <span style="color:#ffd91a">${score * 2} บาท</span></div>
         <div class="msg" style="text-align:center">งบรวมของกลุ่ม = 20 + ${score * 2} = <span style="color:#4ade80">${20 + score * 2} บาท</span></div>
         <div class="score" style="font-size:34px;letter-spacing:3px;color:#ffd91a">${CODES[score]}</div>
-        <div class="info muted" style="text-align:center">รหัสผ่าน: นำหน้าจอนี้ไปแสดงครูเพื่อรับงบประมาณ</div>`;
+        <div class="info muted" style="text-align:center">รหัสผ่าน: นำหน้าจอนี้ไปแสดงครูเพื่อรับงบประมาณ</div>
+        <div class="row"><button class="btn" id="qPrac" style="background:#7c3aed">🎲 ฝึกเพิ่ม (สุ่มจากคลัง 15 ข้อ ไม่นับงบ)</button></div>`;
+      $('qPrac').onclick = startPractice;
       if (score >= 4) { Sound.fanfare(); confetti(); }
       return;
     }
     const q = Q[idx];
-    $('qHead').textContent = `ด่านปลดล็อกงบประมาณ  ข้อ ${idx + 1} / ${Q.length}   งบที่ได้ ${score * 2} บาท   (ตอบได้ข้อละ 1 ครั้ง)`;
+    $('qHead').textContent = practice ? `ชุดฝึกเพิ่ม (ไม่นับงบ)  ข้อ ${idx + 1} / ${Q.length}   ถูก ${score} ข้อ` : `ด่านปลดล็อกงบประมาณ  ข้อ ${idx + 1} / ${Q.length}   งบที่ได้ ${score * 2} บาท   (ตอบได้ข้อละ 1 ครั้ง)`;
     body.innerHTML = `<div class="q">${q.q}</div>` + q.c.map((c, i) => `<button class="choice" data-i="${i}">${L[i]} ${c}</button>`).join('') +
       `<div class="info" id="qFeed"></div><div class="row"><button class="btn on" id="qNext" style="display:none">${idx === Q.length - 1 ? 'ดูผลและรหัสผ่าน' : 'ข้อต่อไป'}</button></div>`;
     body.querySelectorAll('.choice').forEach((b) => b.onclick = () => answer(+b.dataset.i));
@@ -1176,9 +1297,9 @@ function buildAR5(root) {
     const q = Q[idx], ok = i === q.a;
     if (ok) { score++; Sound.ding(); coin.visible = true; coinT = 0; } else Sound.buzz();
     $('qBody').querySelectorAll('.choice').forEach((b) => { const k = +b.dataset.i; if (k === q.a) b.classList.add('right'); else if (k === i) b.classList.add('wrong'); b.disabled = true; });
-    $('qFeed').innerHTML = (ok ? '<span class="good"><b>ถูกต้อง! +2 บาท</b></span> ' : '<span class="bad"><b>เฉลย</b></span> ') + q.e;
+    $('qFeed').innerHTML = (ok ? `<span class="good"><b>ถูกต้อง!${practice ? '' : ' +2 บาท'}</b></span> ` : '<span class="bad"><b>เฉลย</b></span> ') + q.e;
     $('qHead').textContent = `ด่านปลดล็อกงบประมาณ  ข้อ ${idx + 1} / ${Q.length}   งบที่ได้ ${score * 2} บาท`;
-    budgetLab.setText(`งบรวม ${20 + score * 2} บาท (เริ่มต้น 20 + ได้เพิ่ม ${score * 2})`);
+    budgetLab.setText(practice ? `โหมดฝึกเพิ่ม · ถูก ${score} ข้อ` : `งบรวม ${20 + score * 2} บาท (เริ่มต้น 20 + ได้เพิ่ม ${score * 2})`);
     $('qNext').style.display = '';
   }
   let t = 0;
@@ -1469,28 +1590,92 @@ const KIT = (() => {
       if (paper) { const p = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.72), new THREE.MeshStandardMaterial({ color: 0xf3efe4, roughness: 1 })); p.position.z = -0.002; g.add(p); }
       return g;
     }
-    let lastPh = -1, W = innerWidth, H = innerHeight;
-    function fit(obj) {
+    let W = innerWidth, H = innerHeight, lastKey = '', lastObj = null, touched = false, refitT = 0;
+    renderer.domElement.addEventListener('pointerdown', () => { touched = true; });
+    // พื้นที่ว่างบนจอที่ไม่ถูกแถบปุ่มและแผงควบคุมบัง
+    function freeRect() {
+      let l = 6, t = 100, r = W - 6, b = H - 6;
+      const p = $('panel');
+      if (p && getComputedStyle(p).display !== 'none') {
+        const pr = p.getBoundingClientRect();
+        if (pr.height >= H * 0.85 && pr.left > W * 0.3) r = pr.left - 6; else b = Math.min(b, pr.top - 6);
+      }
+      if (b - t < 140) t = Math.max(44, b - 140);
+      return { l, t, r, b };
+    }
+    function corners(obj) {
       scene.updateMatrixWorld(true);
-      const box = new THREE.Box3();
-      obj.traverseVisible((o) => { if ((o.isMesh || o.isSprite) && o.geometry && !o.userData.noFit) { if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld)); } });
-      if (box.isEmpty()) box.set(new THREE.Vector3(-0.5, 0, -0.4), new THREE.Vector3(0.5, 0.5, 0.4));
-      const c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3());
-      const vf = camera.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * camera.aspect);
-      const dW = (Math.max(s.x, 0.5) * 0.5 + 0.05) / Math.tan(hf / 2);
-      const dH = (Math.max(s.y, s.z * 0.5, 0.3) * 0.5 + 0.05) / Math.tan(vf / 2) * 1.6;
-      const d = Math.max(dW, dH, 0.6) * 1.08;
-      const dir = new THREE.Vector3(0, 0.55, 1).normalize();
-      controls.target.copy(c); camera.position.copy(c).addScaledVector(dir, d); controls.update();
+      const pts = [], v = new THREE.Vector3();
+      obj.traverseVisible((o) => {
+        if (o.userData.noFit) return;
+        if (o.isSprite) {
+          o.getWorldPosition(v); const sx = Math.abs(o.scale.x) * 0.5 * 0.8, sy = Math.abs(o.scale.y) * 0.5;
+          for (const dx of [-sx, sx]) for (const dy of [-sy, sy]) pts.push(v.clone().add(new THREE.Vector3(dx, dy, 0)));
+        } else if (o.isMesh && o.geometry) {
+          if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+          const bb = o.geometry.boundingBox; if (bb.isEmpty()) return;
+          for (const x of [bb.min.x, bb.max.x]) for (const y of [bb.min.y, bb.max.y]) for (const z of [bb.min.z, bb.max.z]) pts.push(new THREE.Vector3(x, y, z).applyMatrix4(o.matrixWorld));
+        }
+      });
+      if (!pts.length) pts.push(new THREE.Vector3(-0.5, 0, -0.4), new THREE.Vector3(0.5, 0.5, 0.4));
+      return pts;
+    }
+    window.refit3D = () => { if (lastObj) requestAnimationFrame(() => fit(lastObj)); };
+    function fit(obj) {
+      lastObj = obj; touched = false;
+      const R = freeRect();
+      const pts = corners(obj);
+      const box = new THREE.Box3().setFromPoints(pts);
+      const tv = Math.tan(camera.fov * Math.PI / 360), th = tv * W / H;
+      const tx = th * (R.r - R.l) / W * 0.9, ty = tv * (R.b - R.t) / H * 0.9;
+      const solve = (dir) => {
+      const target = box.getCenter(new THREE.Vector3());
+      const fwd = dir.clone().negate(), right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0, 1, 0)).normalize();
+      const up = new THREE.Vector3().crossVectors(right, fwd);
+      const ext = (d) => {   // ขอบเขตภาพที่ระยะ d (หน่วย tan)
+        const cam = target.clone().addScaledVector(dir, d);
+        let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, ok = true;
+        for (const p of pts) {
+          const q = p.clone().sub(cam), z = q.dot(fwd);
+          if (z < 0.05) { ok = false; break; }
+          const x = q.dot(right) / z, y = q.dot(up) / z;
+          x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+        }
+        return { ok, x0, x1, y0, y1 };
+      };
+      let d = 1;
+      for (let it = 0; it < 3; it++) {
+        let lo = 0.3, hi = 12;
+        for (let k = 0; k < 30; k++) {
+          const m = (lo + hi) / 2, e = ext(m);
+          if (e.ok && (e.x1 - e.x0) <= 2 * tx && (e.y1 - e.y0) <= 2 * ty) hi = m; else lo = m;
+        }
+        d = hi;
+        const e = ext(d), mx = (e.x0 + e.x1) / 2, my = (e.y0 + e.y1) / 2;
+        target.addScaledVector(right, mx * d).addScaledVector(up, my * d);
+      }
+      return { d, target, dir };
+      };
+      // มองจากด้านหน้าเป็นหลัก ถ้าฉากยาวมากบนจอแนวตั้ง ให้มองเฉียงจะเห็นใหญ่กว่า
+      let best = solve(new THREE.Vector3(0, 0.6, 1).normalize());
+      const alt = solve(new THREE.Vector3(0.55, 0.65, 1).normalize());
+      if (alt.d < best.d * 0.8) best = alt;
+      const { d, target, dir } = best;
+      controls.target.copy(target); camera.position.copy(target).addScaledVector(dir, d);
+      controls.maxDistance = Math.max(7, d * 2.5);
+      lastKey = ''; controls.update();
     }
     function onResize() {
-      W = innerWidth; H = innerHeight; renderer.setSize(W, H); camera.aspect = W / H; camera.updateProjectionMatrix(); lastPh = -1;
+      W = innerWidth; H = innerHeight; renderer.setSize(W, H); camera.aspect = W / H; camera.updateProjectionMatrix(); lastKey = '';
     }
     window.addEventListener('resize', onResize);
     function frame() {
-      const p = $('panel');
-      const ph = p.style.display !== 'none' && getComputedStyle(p).display !== 'none' && !p.classList.contains('collapsed') ? p.offsetHeight : 0;
-      if (ph !== lastPh) { lastPh = ph; if (ph > 0) camera.setViewOffset(W, H, 0, Math.min(ph * 0.5, H * 0.3), W, H); else camera.clearViewOffset(); }
+      const R = freeRect(), key = [R.l, R.t, R.r, R.b, W, H].map(Math.round).join(',');
+      if (key !== lastKey) {
+        const first = lastKey === ''; lastKey = key;
+        camera.setViewOffset(W, H, W / 2 - (R.l + R.r) / 2, H / 2 - (R.t + R.b) / 2, W, H);
+        if (!first && lastObj && !touched) { clearTimeout(refitT); refitT = setTimeout(() => { if (!touched) fit(lastObj); }, 250); }
+      }
       controls.update();
     }
     const hint = $('hint3d'); hint.style.display = 'block'; hint.style.opacity = 1;
