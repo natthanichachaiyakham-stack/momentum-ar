@@ -89,7 +89,7 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
 
   /* แผงควบคุมด้านล่าง */
   #panel { position: fixed; z-index: 20; left: 50%; transform: translateX(-50%);
-    bottom: 0; width: min(100%, 620px); max-height: 52vh; display: none; flex-direction: column;
+    bottom: 0; width: min(100%, 620px); max-height: 44vh; display: none; flex-direction: column;
     background: var(--panel); border-radius: 18px 18px 0 0;
     padding-bottom: env(safe-area-inset-bottom, 0px); }
   #panel.collapsed .body { display: none; }
@@ -115,9 +115,9 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
   .msg { font-size: 16px; font-weight: 700; margin: 6px 0; }
   .good { color: var(--good); } .bad { color: var(--bad); } .muted { color: var(--muted); }
   .orange { color: var(--orange); }
-  canvas.graph { width: 100%; height: 170px; display: block; background: rgba(0,0,0,0.25);
+  canvas.graph { width: 100%; height: 190px; display: block; background: rgba(0,0,0,0.25);
     border-radius: 10px; margin: 8px 0; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; margin-top: 6px; }
   th, td { border: 1px solid var(--line); padding: 4px 5px; text-align: center; }
   th { color: var(--muted); font-weight: 600; }
   tr.best td { color: var(--good); font-weight: 700; }
@@ -202,6 +202,14 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
     #hint3d { left: calc((100% - min(46vw, 440px)) / 2); }
     #viewTabs { transform: translateX(-50%); }
   }
+  #zoom3d { position: fixed; z-index: 21; right: 12px; bottom: calc(44vh + 12px); display: flex; flex-direction: column; gap: 6px; }
+  #zoom3d button { width: 46px; height: 46px; border-radius: 50%; border: 0; font-size: 24px; font-weight: 700; color: #fff;
+    background: rgba(20,30,55,0.85); box-shadow: 0 2px 8px rgba(0,0,0,0.4); cursor: pointer; }
+  @media (orientation: landscape) and (min-aspect-ratio: 5/4) { #zoom3d { right: calc(min(46vw, 440px) + 12px); bottom: 16px; } }
+  #lblLayer { position: fixed; inset: 0; z-index: 12; pointer-events: none; overflow: hidden; }
+  #lblLayer .lbl { position: absolute; left: 0; top: 0; white-space: nowrap; font-weight: 700; line-height: 1.25;
+    padding: 0.12em 0.5em; border-radius: 0.6em; background: rgba(10,16,32,0.88); box-shadow: 0 1px 4px rgba(0,0,0,0.45);
+    font-family: Sarabun, sans-serif; will-change: transform; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -229,7 +237,7 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
 <div id="viewTabs"></div>
 <div id="hint3d">ลากนิ้วเพื่อหมุน · บีบสองนิ้วเพื่อซูม<br>แตะปุ่มด้านบนเพื่อเปลี่ยนฉาก</div>
 <div id="toast"></div>
-<div id="sheet"><div class="card"><div class="sh"><h3 id="shTitle"></h3><button id="shVoice" title="เปลี่ยนแบบเสียงพูด">🧸 การ์ตูน</button><button id="shSpeak">🔈 อ่านให้ฟัง</button><button id="shClose">✕</button></div><div id="shBody"></div></div></div>
+<div id="sheet"><div class="card"><div class="sh"><h3 id="shTitle"></h3><button id="shVoice" title="เปลี่ยนแบบเสียงพูด">👸 เจ้าหญิง</button><button id="shSpeak">🔈 อ่านให้ฟัง</button><button id="shClose">✕</button></div><div id="shBody"></div></div></div>
 
 <div id="panel">
   <div class="head"><h2 id="panelTitle"></h2><button id="collapseBtn">ย่อ</button></div>
@@ -394,37 +402,53 @@ function makeArrow(color) {
   return g;
 }
 
-const LBL_SCALE = 1.15;   // ขยายป้ายตัวเลขให้อ่านง่ายบนจอโทรศัพท์
+const LBL_SCALE = 1.5;   // ขยายป้ายตัวเลขให้อ่านง่ายบนจอโทรศัพท์
+// ป้ายตัวเลขแสดงเป็นตัวหนังสือจริงของเว็บ (HTML) ลอยตามวัตถุ → คมชัดทุกระยะ ไม่เบลอเหมือนภาพ
+const LBLS = [];
+let lblLayer = null;
 function makeLabel(color = '#ffffff', width = 0.55) {
-  const c = document.createElement('canvas');
-  c.width = 1024; c.height = 128;
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, opacity: 0, depthTest: false, depthWrite: false }));
   width *= LBL_SCALE;
   s.scale.set(width, width / 8, 1);
   s.renderOrder = 10;
   s.visible = false;
+  if (!lblLayer) { lblLayer = document.createElement('div'); lblLayer.id = 'lblLayer'; document.body.appendChild(lblLayer); }
+  const el = document.createElement('div'); el.className = 'lbl'; el.style.display = 'none'; lblLayer.appendChild(el);
+  s.userData.el = el; s.userData.shown = false; LBLS.push(s);
   let last = null;
   s.setText = (t, col) => {
     const key = t + '|' + (col || color);
     if (key === last) return;
     last = key;
-    const g = c.getContext('2d');
-    g.clearRect(0, 0, 1024, 128);
     if (!t) { s.visible = false; return; }
     s.visible = true;
-    let fs = 80; g.font = `600 ${fs}px Sarabun, sans-serif`;
-    const w0 = g.measureText(t).width;
-    if (w0 > 960) { fs = Math.max(40, Math.floor(fs * 960 / w0)); g.font = `600 ${fs}px Sarabun, sans-serif`; }
-    const tw = Math.min(1016, g.measureText(t).width + 48);
-    g.fillStyle = 'rgba(15,22,40,0.88)';
-    g.beginPath(); g.roundRect((1024 - tw) / 2, 6, tw, 116, 34); g.fill();
-    g.fillStyle = col || color; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText(t, 512, 68);
-    tex.needsUpdate = true;
+    el.textContent = t; el.style.color = col || color;
   };
   return s;
+}
+const _lv = new THREE.Vector3(), _lu = new THREE.Vector3(), _lw = new THREE.Vector3();
+function onStage(o) { while (o) { if (!o.visible) return false; if (o.isScene) return true; o = o.parent; } return false; }
+// เรียกทุกเฟรมหลังวาดภาพ: วางป้าย HTML ให้ตรงตำแหน่งวัตถุบนจอ ขนาดตัวอักษรตามระยะ (อ่านได้เสมออย่างน้อย 12px)
+function updateLabels(camera, renderer) {
+  if (!LBLS.length) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  if (!r.width) return;
+  camera.updateMatrixWorld();
+  _lu.setFromMatrixColumn(camera.matrixWorld, 1).normalize();
+  for (const s of LBLS) {
+    const el = s.userData.el;
+    if (!onStage(s)) { if (s.userData.shown) { el.style.display = 'none'; s.userData.shown = false; } continue; }
+    s.getWorldPosition(_lv); s.getWorldScale(_lw);
+    const top = _lv.clone().addScaledVector(_lu, Math.abs(_lw.y));
+    _lv.project(camera); top.project(camera);
+    if (_lv.z > 1 || _lv.z < -1) { if (s.userData.shown) { el.style.display = 'none'; s.userData.shown = false; } continue; }
+    const x = r.left + (_lv.x + 1) / 2 * r.width, y = r.top + (1 - _lv.y) / 2 * r.height;
+    const hpx = Math.abs(top.y - _lv.y) / 2 * r.height;
+    const fs = Math.max(12, Math.min(30, hpx * 0.62));
+    if (!s.userData.shown) { el.style.display = 'block'; s.userData.shown = true; }
+    el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -50%)`;
+    const f = fs.toFixed(1) + 'px'; if (el.style.fontSize !== f) el.style.fontSize = f;
+  }
 }
 
 const loader = new GLTFLoader();
@@ -472,7 +496,7 @@ class Graph {
     const L = 58, R = 12, T = 12, B = 26;
     const X = (t) => L + (t / this.tMax) * (w - L - R);
     const Y = (p) => h - B - ((p - this.pMin) / (this.pMax - this.pMin)) * (h - T - B);
-    g.font = '12px Sarabun, sans-serif';
+    g.font = '13px Sarabun, sans-serif';
     g.strokeStyle = 'rgba(255,255,255,0.12)'; g.fillStyle = '#9fb4d8'; g.lineWidth = 1;
     const p0 = Math.ceil(this.pMin / this.pStep - 1e-9) * this.pStep;
     for (let p = p0; p <= this.pMax + 1e-9; p += this.pStep) {
@@ -502,10 +526,10 @@ class Graph {
       s.pts.forEach(([t, p], i) => (i ? g.lineTo(X(t), Y(p)) : g.moveTo(X(t), Y(p))));
       g.stroke();
       if (s.tag) {
-        g.fillStyle = s.color; g.font = '600 13px Sarabun, sans-serif';
+        g.fillStyle = s.color; g.font = '600 14px Sarabun, sans-serif';
         g.textAlign = 'right'; g.textBaseline = 'bottom';
         g.fillText(s.tag.text, Math.max(L + 120, X(s.tag.t) - 4), Y(s.tag.p) - 4);
-        g.font = '12px Sarabun, sans-serif';
+        g.font = '13px Sarabun, sans-serif';
       }
     }
   }
@@ -788,7 +812,7 @@ function buildSceneA(root) {
       g.fillText(n.length > 12 ? n.slice(0, 12) + '…' : n, L - 6, y + 13);
       g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(L, y, w - L - Rr, 26);
       if (reveal) { g.fillStyle = col; g.fillRect(L, y, Math.max(2, (w - L - Rr) * p / mx), 26);
-        g.fillStyle = '#fff'; g.textAlign = 'left'; g.font = '600 13px Sarabun, sans-serif'; g.fillText(`p = ${fmtP(p)} kg·m/s`, L + 6, y + 13); }
+        g.fillStyle = '#fff'; g.textAlign = 'left'; g.font = '600 14px Sarabun, sans-serif'; g.fillText(`p = ${fmtP(p)} kg·m/s`, L + 6, y + 13); }
       else { g.fillStyle = '#ffd91a'; g.textAlign = 'center'; g.font = '600 14px Sarabun, sans-serif'; g.fillText('?', (L + w - Rr) / 2, y + 13); }
     });
   }
@@ -1729,7 +1753,7 @@ const KIT = (() => {
     const el = $('toast'); el.innerHTML = t; el.style.display = 'block';
     clearTimeout(toastT); toastT = setTimeout(() => { el.style.display = 'none'; }, ms);
   }
-  const pixelRatio = () => (lite ? 1 : Math.min(window.devicePixelRatio || 1, 2));
+  const pixelRatio = () => Math.min(window.devicePixelRatio || 1, lite ? 1.5 : 2);
   function applyLite(r) { if (r) r.setPixelRatio(pixelRatio()); }
 
   // ตรวจความลื่น: ถ้าภาพกระตุกต่อเนื่อง เปิดโหมดประหยัดให้เอง
@@ -1738,13 +1762,21 @@ const KIT = (() => {
     acc += raw; frames++;
     if (acc >= 3) {
       const fps = frames / acc; acc = 0; frames = 0;
-      if (fps < 20 && !lite && !warned) { warned = true; lite = true; applyLite(renderer); toast('เครื่องทำงานหนัก จึงเปิดโหมดประหยัดให้อัตโนมัติแล้ว ภาพจะลื่นขึ้น'); }
+      if (fps < 15 && !lite && !warned && performance.now() > 9000) { warned = true; lite = true; applyLite(renderer); toast('เครื่องทำงานหนัก จึงเปิดโหมดประหยัดให้อัตโนมัติแล้ว ภาพจะลื่นขึ้น'); }
     }
   }
 
   // ---------- อ่านให้ฟัง (เสียงภาษาไทยของเครื่อง) ----------
-  let voice = null, cartoon = true;
-  try { cartoon = localStorage.getItem('arVoice') !== 'normal'; } catch (e) {}
+  // แบบเสียงพูด: เจ้าหญิง (หวาน ใส สดใส) · การ์ตูน (สูง เร็ว ตื่นเต้น) · ปกติ
+  const VOICES = {
+    princess: { lab: '👸 เจ้าหญิง', pitch: 1.75, rate: 1.0,
+      hi: ['สวัสดีจ้าเพื่อน ๆ! มาผจญภัยในโลกฟิสิกส์ด้วยกันนะ', 'ว้าว! ตื่นเต้นจังเลย มาฟังกันนะคะ', 'เย้! วันนี้เราจะได้ค้นพบเรื่องใหม่ด้วยกันจ้า', 'มาเถอะจ้า ไปดูความลับของโมเมนตัมกัน!'] },
+    cartoon: { lab: '🧸 การ์ตูน', pitch: 1.55, rate: 1.05, hi: ['ว้าว! มาฟังกันเลย!', 'เย้! มาเรียนรู้กันนะ!', 'ตื่นเต้นจัง! ฟังให้ดีนะ!', 'มาดูกันเลย!'] },
+    normal: { lab: '🙂 ปกติ', pitch: 1, rate: 0.95, hi: null },
+  };
+  const ORDER = ['princess', 'cartoon', 'normal'];
+  let voice = null, vstyle = 'princess';
+  try { const v = localStorage.getItem('arVoice2'); if (VOICES[v]) vstyle = v; } catch (e) {}
   // เลือกเสียงภาษาไทยที่ชัดที่สุดของเครื่อง (เสียงคุณภาพสูงก่อน)
   const pickVoice = () => { try { const vs = speechSynthesis.getVoices().filter((v) => /^th/i.test(v.lang));
     voice = vs.find((v) => /premium|enhanced|ปรับปรุง|natural|neural/i.test(v.name)) || vs.find((v) => /kanya|narisa|premwadee|google/i.test(v.name)) || vs[0] || null; } catch (e) {} };
@@ -1816,12 +1848,13 @@ const KIT = (() => {
     return t.replace(/\s+/g, ' ').replace(/ \./g, '.').trim();
   }
   function stopSpeak() { try { speechSynthesis.cancel(); } catch (e) {} }
-  function speak(html) {
+  function speak(html, quick = false) {
     if (!('speechSynthesis' in window)) { toast('เบราว์เซอร์นี้อ่านออกเสียงไม่ได้'); return; }
     stopSpeak(); pickVoice();
     let text = sayable(html);
-    if (cartoon) {   // เปิดด้วยคำทักทายสั้น ๆ ให้ตื่นเต้น + เสียงวิบวับ
-      const hi = ['ว้าว! มาฟังกันเลย!', 'เย้! มาเรียนรู้กันนะ!', 'ตื่นเต้นจัง! ฟังให้ดีนะ!', 'มาดูกันเลย!'];
+    const VS = VOICES[vstyle];
+    if (VS.hi && !quick) {   // เปิดด้วยคำทักทายสั้น ๆ ให้ตื่นเต้น + เสียงวิบวับ
+      const hi = VS.hi;
       text = hi[Math.floor(Math.random() * hi.length)] + '. ' + text;
       try { Sound.init(); Sound.sparkle(0, 0.09); } catch (e) {}
     }
@@ -1836,8 +1869,8 @@ const KIT = (() => {
     parts.forEach((p, k) => {
       const u = new SpeechSynthesisUtterance(p); u.lang = 'th-TH'; if (voice) u.voice = voice;
       // เสียงการ์ตูน: เสียงสูง ใส พูดเร็วขึ้นเล็กน้อย แต่ยังชัด · เสียงปกติ: เสียงธรรมดา พูดช้าลงนิด
-      if (cartoon) { u.pitch = 1.55; u.rate = 1.05; if (k === 0) u.rate = 1.1; } else { u.pitch = 1; u.rate = 0.95; }
-      if (cartoon && k === parts.length - 1) u.onend = () => { try { Sound.ding(); } catch (e) {} };
+      u.pitch = VS.pitch; u.rate = VS.rate;
+      if (VS.hi && k === parts.length - 1) u.onend = () => { try { Sound.ding(); } catch (e) {} };
       speechSynthesis.speak(u);
     });
   }
@@ -1878,9 +1911,10 @@ const KIT = (() => {
     $('knowBtn').onclick = showKnow; $('whyBtn').onclick = showWhy;
     $('shClose').onclick = closeSheet; $('sheet').onclick = (e) => { if (e.target.id === 'sheet') closeSheet(); };
     $('shSpeak').onclick = () => speak(sheetSay);
-    const vLab = () => { $('shVoice').textContent = cartoon ? '🧸 การ์ตูน' : '🙂 ปกติ'; };
+    const vLab = () => { $('shVoice').textContent = VOICES[vstyle].lab; };
     vLab();
-    $('shVoice').onclick = () => { cartoon = !cartoon; try { localStorage.setItem('arVoice', cartoon ? 'cartoon' : 'normal'); } catch (e) {} vLab(); stopSpeak(); if (cartoon) { Sound.init(); Sound.pop(); } };
+    $('shVoice').onclick = () => { vstyle = ORDER[(ORDER.indexOf(vstyle) + 1) % ORDER.length]; try { localStorage.setItem('arVoice2', vstyle); } catch (e) {} vLab(); stopSpeak(); Sound.init(); Sound.pop();
+      speak(vstyle === 'normal' ? 'เปลี่ยนเป็นเสียงปกติ' : vstyle === 'princess' ? 'สวัสดีจ้า! ฉันจะเป็นคนเล่าความรู้ให้ฟังนะ' : 'เย้! เสียงการ์ตูนมาแล้ว!', true); };
     if (inApp) {
       const url = location.href.split('#')[0];
       const intent = isAndroid ? `intent://${location.host}${location.pathname}${location.search}#Intent;scheme=https;package=com.android.chrome;end` : '';
@@ -1966,7 +2000,7 @@ const KIT = (() => {
       const pts = corners(obj);
       const box = new THREE.Box3().setFromPoints(pts);
       const tv = Math.tan(camera.fov * Math.PI / 360), th = tv * W / H;
-      const tx = th * (R.r - R.l) / W * 0.9, ty = tv * (R.b - R.t) / H * 0.9;
+      const tx = th * (R.r - R.l) / W * 0.96, ty = tv * (R.b - R.t) / H * 0.96;
       const solve = (dir) => {
       const target = box.getCenter(new THREE.Vector3());
       const fwd = dir.clone().negate(), right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0, 1, 0)).normalize();
@@ -2008,6 +2042,18 @@ const KIT = (() => {
       W = innerWidth; H = innerHeight; renderer.setSize(W, H); camera.aspect = W / H; camera.updateProjectionMatrix(); lastKey = '';
     }
     window.addEventListener('resize', onResize);
+    // ปุ่มซูม (สำหรับคนที่ใช้สองนิ้วถ่างจอไม่ถนัด): ขยายดูวัตถุใกล้ ๆ ให้ชัดขึ้น
+    const zb = document.createElement('div'); zb.id = 'zoom3d';
+    zb.innerHTML = '<button data-z="0.75" aria-label="ซูมเข้า">＋</button><button data-z="1.33" aria-label="ซูมออก">－</button><button data-z="0" aria-label="มุมเดิม">⟲</button>';
+    document.body.appendChild(zb);
+    zb.querySelectorAll('button').forEach((b) => b.onclick = (e) => {
+      e.stopPropagation(); const k = +b.dataset.z;
+      if (!k) { if (lastObj) fit(lastObj); return; }
+      touched = true;
+      const off = camera.position.clone().sub(controls.target).multiplyScalar(k);
+      if (off.length() < controls.minDistance || off.length() > controls.maxDistance) return;
+      camera.position.copy(controls.target).add(off); controls.update();
+    });
     function frame() {
       const R = freeRect(), key = [R.l, R.t, R.r, R.b, W, H].map(Math.round).join(',');
       if (key !== lastKey) {
@@ -2040,7 +2086,7 @@ const EXTRA_TABS = '';
 // ===== โหมด 3 มิติ (ไม่ใช้กล้อง): หลายฉาก เลือกที่แถบด้านบน =====
 async function start3D() {
   $('start').style.display = 'none';
-  try { await document.fonts.load('600 64px Sarabun'); } catch (e) {}
+  try { await document.fonts.load('700 84px Sarabun'); } catch (e) {}
   const V = KIT.make3D();
   const groups = [];
   BUILDERS().forEach((b, i) => {
@@ -2068,7 +2114,7 @@ async function start3D() {
     const raw = clock.getDelta(); KIT.tick(raw, V.renderer);
     const dt = Math.min(raw, 0.05) * timeScale;
     for (const s of scenes) s.update(dt);
-    V.frame(); V.renderer.render(V.scene, V.camera);
+    V.frame(); V.renderer.render(V.scene, V.camera); updateLabels(V.camera, V.renderer);
   });
 }
 
@@ -2077,7 +2123,7 @@ async function start() {
   Sound.init();
   $('startMsg').style.color = '#9fb4d8';
   $('startMsg').textContent = 'กำลังเปิดกล้องและโหลดภาพ marker...';
-  try { await document.fonts.load('600 64px Sarabun'); } catch (e) {}
+  try { await document.fonts.load('700 84px Sarabun'); } catch (e) {}
   let MindARThree;
   try { ({ MindARThree } = await import('mindar-image-three')); }
   catch (e) { $('startBtn').disabled = false; $('startMsg').style.color = ''; $('startMsg').textContent = 'โหลดระบบกล้อง AR ไม่สำเร็จ (เน็ตอาจช้า) กดลองใหม่ หรือใช้ปุ่มสีฟ้า'; KIT.camFailed(); console.error(e); return; }
@@ -2134,7 +2180,7 @@ async function start() {
     const raw = clock.getDelta(); KIT.tick(raw, renderer);
     const dt = Math.min(raw, 0.05) * timeScale;
     for (const s of scenes) s.update(dt);
-    renderer.render(scene, camera);
+    renderer.render(scene, camera); updateLabels(camera, renderer);
   });
   window.addEventListener('resize', () => { if (current >= 0) scenes[current].onShow(); });
 }
