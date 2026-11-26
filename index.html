@@ -151,9 +151,9 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
     padding: 8px 12px; text-decoration: none; cursor: pointer; }
   #liteRow { color: var(--muted); font-size: 14px; display: flex; gap: 8px; align-items: center; }
   #liteRow input { width: 20px; height: 20px; accent-color: #ffd91a; }
-  #tools { position: fixed; z-index: 21; left: 12px; top: calc(env(safe-area-inset-top, 0px) + 98px);
-    display: none; flex-direction: column; gap: 8px; }
-  #tools button { font: inherit; font-size: 15px; color: #fff; background: var(--panel); border: 2px solid rgba(255,217,26,0.6);
+  #tools { position: fixed; z-index: 21; left: 64px; top: calc(env(safe-area-inset-top, 0px) + 54px);
+    display: none; flex-direction: row; gap: 6px; }
+  #tools button { font: inherit; font-size: 14px; color: #fff; background: var(--panel); border: 2px solid rgba(255,217,26,0.6);
     border-radius: 999px; padding: 6px 12px; cursor: pointer; text-align: left; }
   #viewTabs { position: fixed; z-index: 22; top: calc(env(safe-area-inset-top, 0px) + 8px); left: 50%; transform: translateX(-50%);
     display: none; gap: 6px; background: var(--panel); border-radius: 999px; padding: 5px; max-width: calc(100% - 16px); overflow-x: auto; }
@@ -185,6 +185,22 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
   .why b { color: #ffd91a; }
   #toast { position: fixed; z-index: 45; left: 50%; bottom: 55vh; transform: translateX(-50%); background: rgba(15,22,40,0.95);
     border: 2px solid #ffd91a; border-radius: 12px; padding: 8px 14px; font-size: 15px; display: none; max-width: 90vw; text-align: center; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
+  .chips button { font: inherit; font-size: 14px; color: #fff; background: var(--tab-off); border: 0; border-radius: 999px;
+    padding: 6px 11px; cursor: pointer; }
+  .chips button.on { background: var(--tab-on); box-shadow: 0 0 0 2px #b3d9ff inset; }
+  #sceneA .tabs { flex-wrap: wrap; }
+  #sceneA .tabs button { flex: 1 1 22%; font-size: 15px; padding: 8px 6px; }
+  @media (orientation: landscape) and (min-aspect-ratio: 5/4) {
+    #panel { left: auto; right: 0; transform: none; top: 0; bottom: 0; width: min(46vw, 440px); max-height: none;
+      border-radius: 18px 0 0 18px; padding-bottom: 0; }
+    #panel .body { padding-bottom: env(safe-area-inset-bottom, 8px); }
+    #slowBtn { right: calc(min(46vw, 440px) + 12px); }
+    #viewTabs, #chip { left: calc((100% - min(46vw, 440px)) / 2); max-width: calc(100% - min(46vw, 440px) - 16px); }
+    #toast { left: calc((100% - min(46vw, 440px)) / 2); bottom: 20vh; }
+    #hint3d { left: calc((100% - min(46vw, 440px)) / 2); }
+    #viewTabs { transform: translateX(-50%); }
+  }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -224,6 +240,7 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
         <button data-mode="mom" class="on">โมเมนตัม</button>
         <button data-mode="force">ออกแรง</button>
         <button data-mode="ball">ลูกบอลชนผนัง</button>
+        <button data-mode="obj">วัตถุรอบตัว</button>
       </div>
       <div id="aMom">
         <label class="sl" id="tMLab"></label><input type="range" id="tM" min="1000" max="12000" step="100" value="8000">
@@ -243,8 +260,10 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
       <div id="aForce" style="display:none">
         <label class="sl" id="fMLab"></label><input type="range" id="fM" min="500" max="2500" step="50" value="1200">
         <div class="row">
-          <button class="btn on" id="mul1">แรง 1 เท่า (2,000 N)</button>
-          <button class="btn" id="mul2">แรง 2 เท่า (4,000 N)</button>
+          <button class="btn" id="mul05">0.5 เท่า<br>1,000 N</button>
+          <button class="btn on" id="mul1">1 เท่า<br>2,000 N</button>
+          <button class="btn" id="mul2">2 เท่า<br>4,000 N</button>
+          <button class="btn" id="mul3">3 เท่า<br>6,000 N</button>
         </div>
         <div class="row">
           <button class="btn go" id="pushBtn">ออกแรง!</button>
@@ -257,11 +276,22 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
         <div class="msg orange" id="forceMsg2"></div>
         <div class="msg good" id="forceMsg"></div>
       </div>
+      <div id="aObj" style="display:none">
+        <label class="sl">วัตถุ A (เลนหลัง)</label><div class="chips" id="objA"></div>
+        <label class="sl" id="oVaLab"></label><input type="range" id="oVa" min="0" max="10" step="1" value="5">
+        <label class="sl">วัตถุ B (เลนหน้า)</label><div class="chips" id="objB"></div>
+        <label class="sl" id="oVbLab"></label><input type="range" id="oVb" min="0" max="10" step="1" value="5">
+        <div class="info" id="objInfo"></div>
+        <canvas class="graph" id="objBars" style="height:110px"></canvas>
+        <div class="row"><button class="btn" id="objQuiz" style="background:#7c3aed">🤔 เกมทายก่อน: อะไรมีโมเมนตัมมากกว่า?</button></div>
+        <div class="info" id="objQ"></div>
+      </div>
       <div id="aBall" style="display:none">
-        <div class="row">
-          <button class="btn on" id="wallHard">ผนังแข็ง (คอนกรีต)</button>
-          <button class="btn" id="wallSoft">ผนังนุ่ม (ฟองน้ำ)</button>
-        </div>
+        <label class="sl">เลือกลูกบอล</label>
+        <div class="chips" id="ballKinds"></div>
+        <label class="sl">เลือกผนัง (ยิ่งนุ่ม ยิ่งใช้เวลาชนนาน)</label>
+        <div class="chips" id="wallKinds"></div>
+        <label class="sl" id="bVLab"></label><input type="range" id="bV" min="2" max="8" step="1" value="4">
         <div class="row">
           <button class="btn go" id="ballBtn">ปล่อยลูกบอล</button>
           <button class="btn" id="ballClr" style="flex:0.5">ล้างผล</button>
@@ -292,6 +322,9 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
         <button class="btn on" id="wSmooth">ล้อลื่น (แรงเสียดทานน้อย)</button>
         <button class="btn" id="wRough">ล้อฝืด (แรงเสียดทานมาก)</button>
       </div>
+      <label class="sl">จำนวนลูกโป่ง</label><div class="chips" id="nbRow"></div>
+      <label class="sl">หลอดหัวฉีด (แคบ = แรงน้อยพ่นนาน · กว้าง = แรงมากพ่นสั้น)</label><div class="chips" id="nozRow"></div>
+      <label class="sl">พื้นที่ทดสอบ</label><div class="chips" id="floorRow"></div>
       <div class="info muted" id="cSetting"></div>
       <div class="row"><button class="btn on" id="pairBtn">แสดงแรงคู่กิริยา–ปฏิกิริยา (ลูกศรม่วง/เขียว)</button></div>
       <div class="row">
@@ -360,12 +393,14 @@ function makeArrow(color) {
   return g;
 }
 
+const LBL_SCALE = 1.15;   // ขยายป้ายตัวเลขให้อ่านง่ายบนจอโทรศัพท์
 function makeLabel(color = '#ffffff', width = 0.55) {
   const c = document.createElement('canvas');
   c.width = 1024; c.height = 128;
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+  width *= LBL_SCALE;
   s.scale.set(width, width / 8, 1);
   s.renderOrder = 10;
   s.visible = false;
@@ -378,12 +413,14 @@ function makeLabel(color = '#ffffff', width = 0.55) {
     g.clearRect(0, 0, 1024, 128);
     if (!t) { s.visible = false; return; }
     s.visible = true;
-    g.font = '600 64px Sarabun, sans-serif';
-    const tw = Math.min(1010, g.measureText(t).width + 56);
-    g.fillStyle = 'rgba(15,22,40,0.85)';
-    g.beginPath(); g.roundRect((1024 - tw) / 2, 12, tw, 104, 30); g.fill();
+    let fs = 80; g.font = `600 ${fs}px Sarabun, sans-serif`;
+    const w0 = g.measureText(t).width;
+    if (w0 > 960) { fs = Math.max(40, Math.floor(fs * 960 / w0)); g.font = `600 ${fs}px Sarabun, sans-serif`; }
+    const tw = Math.min(1016, g.measureText(t).width + 48);
+    g.fillStyle = 'rgba(15,22,40,0.88)';
+    g.beginPath(); g.roundRect((1024 - tw) / 2, 6, tw, 116, 34); g.fill();
     g.fillStyle = col || color; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText(t, 512, 66);
+    g.fillText(t, 512, 68);
     tex.needsUpdate = true;
   };
   return s;
@@ -575,7 +612,7 @@ $('soundBtn').onclick = () => { Sound.init(); Sound.on = !Sound.on; $('soundBtn'
 function buildSceneA(root) {
   const S = { mode: 'mom', truckM: 8000, truckV: 10, sedanM: 1200, sedanV: 10, mul: 1,
     force: { running: false, t: 0, v: 0, p: 0, s: 0, next: 0, series: null, slope: false },
-    runs: [], cnt: trialCounter(), log: [], ball: { running: false, phase: 'idle', x: -0.55, vel: 0, bounced: false, soft: false, tc: 0, s: 0, F: 0, done: {}, series: {} } };
+    runs: [], cnt: trialCounter(), log: [], ball: { running: false, phase: 'idle', x: -0.55, vel: 0, bounced: false, soft: false, kind: 2, wall: 0, v: 4, tc: 0, s: 0, F: 0, runs: [], series: null, cur: null } };
 
   const road = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.01, 0.8), mat(0x3a4150));
   root.add(road);
@@ -583,7 +620,7 @@ function buildSceneA(root) {
     const line = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.012, 0.012), mat(0xffffff));
     line.position.set(0, 0.002, z); root.add(line);
   }
-  const truck = loadCar('./models/garbage-truck.glb', 0.42, 0x3cb371);
+  const truck = loadCar('./models/truck.glb', 0.42, 0x3cb371);
   const sedan = loadCar('./models/sedan.glb', 0.32, 0x3c78d8);
   root.add(truck, sedan);
   const truckArrow = makeArrow(0x33d9ff), sedanArrow = makeArrow(0x33d9ff);
@@ -598,9 +635,23 @@ function buildSceneA(root) {
   foam.position.set(0.65, 0.2, 0);
   const wallForce = makeArrow(0xff3333), wallForceLabel = makeLabel('#ff6b6b', 0.5);
   root.add(foam, wallForce, wallForceLabel);
-  const ballGraph = new Graph($('ballGraph'), { tMax: 0.25, tStep: 0.05, tFmt: (t) => t.toFixed(2), pMax: 700, pStep: 100, fmt: N, yLabel: 'F (N)', maxSeries: 2 });
+  const ballGraph = new Graph($('ballGraph'), { tMax: 0.25, tStep: 0.05, tFmt: (t) => t.toFixed(2), pMax: 700, pStep: 100, fmt: N, yLabel: 'F (N)', maxSeries: 3 });
+  // ตัวเลือกลูกบอล (มวลจริงโดยประมาณ) และผนัง (เวลาที่สัมผัสกัน Δt)
+  const BALLS = [
+    { n: 'ลูกเทนนิส', m: 0.06, r: 0.035, c: 0xd4f04a },
+    { n: 'ลูกวอลเลย์บอล', m: 0.27, r: 0.055, c: 0xf5f0e6 },
+    { n: 'ลูกบอล', m: 0.5, r: 0.06, c: 0xff8c1a },
+    { n: 'ลูกบอลถ่วงน้ำหนัก', m: 2, r: 0.065, c: 0x8b5a2b },
+  ];
+  const WALLS = [
+    { n: 'คอนกรีต', dt: 0.01, soft: false, c: 0x8a8a8a, col: '#ff3333' },
+    { n: 'ไม้อัด', dt: 0.02, soft: false, c: 0xb7854b, col: '#ff7326' },
+    { n: 'ยางกันชน', dt: 0.05, soft: true, c: 0x2b2b2b, col: '#c77dff' },
+    { n: 'ฟองน้ำ', dt: 0.2, soft: true, c: 0xf2c94c, col: '#4ade80' },
+    { n: 'เบาะยิมนาสติก', dt: 0.3, soft: true, c: 0x3b82f6, col: '#33d9ff' },
+  ];
   const HARD_DT = 0.01, SOFT_DT = 0.2;
-  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.06, 24, 16), mat(0xff8c1a));
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), mat(0xff8c1a)); ball.scale.setScalar(0.06);
   const ballNow = makeArrow(0x33d9ff), ballBefore = makeArrow(0x33d9ff), ballDp = makeArrow(0xffd91a);
   ballBefore.setOpacity(0.35);
   const ballLabel = makeLabel('#33d9ff', 0.45), ballDpLabel = makeLabel('#ffd91a', 0.55);
@@ -609,7 +660,148 @@ function buildSceneA(root) {
   truck.position.set(-0.6, 0, -0.18);
   sedan.position.set(-0.3, 0, 0.18);
 
-  const graph = new Graph($('forceGraph'), { tMax: 4, pMax: 12000, pStep: 3000, fmt: N });
+  const graph = new Graph($('forceGraph'), { tMax: 4, pMax: 18000, pStep: 3000, fmt: N });
+
+  // ----- วัตถุรอบตัว: เทียบโมเมนตัมของสิ่งของในชีวิตจริง -----
+  const OBJS = [
+    { n: 'ลูกปิงปอง', m: 0.0027, v: 20, vmax: 30, st: 1 },
+    { n: 'ลูกเทนนิส (เสิร์ฟ)', m: 0.058, v: 50, vmax: 70, st: 1 },
+    { n: 'ลูกฟุตบอล', m: 0.43, v: 25, vmax: 35, st: 1 },
+    { n: 'ลูกโบว์ลิ่ง', m: 7, v: 8, vmax: 10, st: 0.5 },
+    { n: 'เต่าบก', m: 3, v: 0.2, vmax: 0.5, st: 0.05 },
+    { n: 'นักเรียนวิ่ง', m: 50, v: 6, vmax: 10, st: 0.5 },
+    { n: 'จักรยาน+คน', m: 70, v: 5, vmax: 12, st: 0.5 },
+    { n: 'มอเตอร์ไซค์+คน', m: 200, v: 15, vmax: 30, st: 1 },
+    { n: 'รถเก๋ง', m: 1200, v: 15, vmax: 40, st: 1 },
+    { n: 'รถบรรทุก', m: 8000, v: 10, vmax: 30, st: 1 },
+  ];
+  const fmtM = (m) => m < 0.01 ? m.toFixed(4) : m < 1 ? +m.toFixed(3) + '' : N(m);
+  const fmtP = (p) => p < 0.1 ? p.toFixed(3) : p < 10 ? p.toFixed(2) : N(p);
+  function person(col) {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.025, 0.07, 4, 10), mat(col)); body.position.y = 0.08; g.add(body);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.022, 14, 10), mat(0xf1c27d)); head.position.y = 0.155; g.add(head);
+    return g;
+  }
+  function wheelPair(g, r, x0, x1, tube = 0.007) {
+    for (const x of [x0, x1]) { const w = new THREE.Mesh(new THREE.TorusGeometry(r, tube, 8, 24), mat(0x222222)); w.position.set(x, r, 0); g.add(w); }
+  }
+  function makeObj(k) {
+    const g = new THREE.Group();
+    const ballOf = (r, c, rough = 0.5) => { const b = new THREE.Mesh(new THREE.SphereGeometry(r, 24, 16), mat(c, { roughness: rough })); b.position.y = r; g.add(b); };
+    if (k === 0) ballOf(0.022, 0xffffff, 0.3);
+    else if (k === 1) ballOf(0.03, 0xd4f04a, 0.9);
+    else if (k === 2) { ballOf(0.055, 0xffffff); const p = new THREE.Mesh(new THREE.SphereGeometry(0.0565, 6, 4), new THREE.MeshBasicMaterial({ color: 0x111111, wireframe: true })); p.position.y = 0.055; g.add(p); }
+    else if (k === 3) ballOf(0.065, 0x1e3a8a, 0.25);
+    else if (k === 4) {
+      const sh = new THREE.Mesh(new THREE.SphereGeometry(0.06, 20, 12), mat(0x4d7c0f)); sh.scale.set(1.2, 0.55, 0.9); sh.position.y = 0.035; g.add(sh);
+      const hd = new THREE.Mesh(new THREE.SphereGeometry(0.02, 12, 8), mat(0x84a83a)); hd.position.set(0.085, 0.03, 0); g.add(hd);
+    } else if (k === 5) g.add(person(0x2563eb));
+    else if (k === 6) {
+      wheelPair(g, 0.045, -0.06, 0.06);
+      const fr = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.008, 0.008), mat(0xdc2626)); fr.position.y = 0.07; g.add(fr);
+      const pp = person(0x16a34a); pp.scale.setScalar(0.85); pp.position.set(-0.01, 0.04, 0); g.add(pp);
+    } else if (k === 7) {
+      wheelPair(g, 0.042, -0.075, 0.075, 0.014);
+      const bd = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.04, 0.04), mat(0xdc2626)); bd.position.y = 0.075; g.add(bd);
+      const pp = person(0x111827); pp.scale.setScalar(0.85); pp.position.set(-0.01, 0.06, 0); g.add(pp);
+    } else if (k === 8) g.add(loadCar('./models/sedan.glb', 0.3, 0x3c78d8));
+    else g.add(loadCar('./models/truck.glb', 0.4, 0x3cb371));
+    return g;
+  }
+  const OB = { a: 8, b: 2, va: OBJS[8].v, vb: OBJS[2].v, objs: [null, null], quiz: null, score: 0, n: 0 };
+  const objRoot = new THREE.Group(); root.add(objRoot); objRoot.visible = false;
+  const objArrows = [makeArrow(0x33d9ff), makeArrow(0xffa94d)], objLabels = [makeLabel('#33d9ff', 0.7), makeLabel('#ffa94d', 0.7)];
+  objRoot.add(...objArrows, ...objLabels);
+  const OZ = [-0.2, 0.16];
+  function setObj(slot, k) {
+    if (OB.objs[slot]) objRoot.remove(OB.objs[slot]);
+    const o = makeObj(k); o.scale.setScalar(k >= 8 ? 1 : 1.6); o.position.set(-0.7, 0, OZ[slot]); objRoot.add(o); OB.objs[slot] = o;
+    const sl = $(slot ? 'oVb' : 'oVa'), d = OBJS[k];
+    sl.max = d.vmax; sl.step = d.st; sl.value = d.v;
+    if (slot) { OB.b = k; OB.vb = d.v; } else { OB.a = k; OB.va = d.v; }
+  }
+  const chipsOf = (id, slot) => {
+    $(id).innerHTML = OBJS.map((o, i) => `<button data-i="${i}">${o.n}</button>`).join('');
+    $(id).querySelectorAll('button').forEach((x) => x.onclick = () => { setObj(slot, +x.dataset.i); OB.quiz = null; $('objQ').innerHTML = ''; refreshObj(); });
+  };
+  chipsOf('objA', 0); chipsOf('objB', 1);
+  $('oVa').oninput = (e) => { OB.va = +e.target.value; refreshObj(); };
+  $('oVb').oninput = (e) => { OB.vb = +e.target.value; refreshObj(); };
+  setObj(0, OB.a); setObj(1, OB.b);
+  function drawObjBars(pa, pb, reveal = true) {
+    const c = $('objBars'), w = c.clientWidth, h = c.clientHeight; if (!w) return;
+    const dpr = window.devicePixelRatio || 1; c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+    const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+    const mx = Math.max(pa, pb, 1e-9), L = 92, Rr = 14;
+    [[OBJS[OB.a].n, pa, '#33d9ff', 18], [OBJS[OB.b].n, pb, '#ffa94d', 64]].forEach(([n, p, col, y]) => {
+      g.font = '13px Sarabun, sans-serif'; g.fillStyle = '#cfe0ff'; g.textAlign = 'right'; g.textBaseline = 'middle';
+      g.fillText(n.length > 12 ? n.slice(0, 12) + '…' : n, L - 6, y + 13);
+      g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(L, y, w - L - Rr, 26);
+      if (reveal) { g.fillStyle = col; g.fillRect(L, y, Math.max(2, (w - L - Rr) * p / mx), 26);
+        g.fillStyle = '#fff'; g.textAlign = 'left'; g.font = '600 13px Sarabun, sans-serif'; g.fillText(`p = ${fmtP(p)} kg·m/s`, L + 6, y + 13); }
+      else { g.fillStyle = '#ffd91a'; g.textAlign = 'center'; g.font = '600 14px Sarabun, sans-serif'; g.fillText('?', (L + w - Rr) / 2, y + 13); }
+    });
+  }
+  function refreshObj() {
+    const A = OBJS[OB.a], B = OBJS[OB.b], pa = A.m * OB.va, pb = B.m * OB.vb;
+    $('objA').querySelectorAll('button').forEach((x) => x.classList.toggle('on', +x.dataset.i === OB.a));
+    $('objB').querySelectorAll('button').forEach((x) => x.classList.toggle('on', +x.dataset.i === OB.b));
+    const hide = !!(OB.quiz && !OB.quiz.done);
+    $('oVaLab').textContent = `${A.n}  m = ${fmtM(A.m)} kg   v = ${OB.va} m/s (${N(OB.va * 3.6)} km/h)`;
+    $('oVbLab').textContent = `${B.n}  m = ${fmtM(B.m)} kg   v = ${OB.vb} m/s (${N(OB.vb * 3.6)} km/h)`;
+    let s;
+    if (hide) s = 'ลองคำนวณ p = mv ในใจ แล้วเลือกคำตอบด้านล่าง';
+    else {
+      s = `p = mv   ${A.n} = ${fmtM(A.m)} × ${OB.va} = <b>${fmtP(pa)}</b> kg·m/s<br>p = mv   ${B.n} = ${fmtM(B.m)} × ${OB.vb} = <b>${fmtP(pb)}</b> kg·m/s<br>`;
+      const big = Math.max(pa, pb), small = Math.min(pa, pb);
+      if (big < 1e-9) s += 'หยุดนิ่งทั้งคู่ โมเมนตัมเป็นศูนย์';
+      else if (small < 1e-9) s += `${pa > pb ? B.n : A.n}หยุดนิ่ง จึงไม่มีโมเมนตัม`;
+      else if (Math.abs(pa - pb) <= 0.02 * big) s += '<span class="good"><b>โมเมนตัมเท่ากัน!</b></span>';
+      else {
+        const r = big / small, heavy = A.m > B.m ? 'A' : 'B', win = pa > pb ? 'A' : 'B';
+        s += `<span class="good">${pa > pb ? A.n : B.n}มีโมเมนตัมมากกว่า ${r >= 100 ? N(r) : r.toFixed(1)} เท่า</span>`;
+        if (heavy !== win) s += '<br><span class="orange">ของเบากว่าแต่เร็วกว่ามาก จึงมีโมเมนตัมมากกว่าได้!</span>';
+      }
+    }
+    $('objInfo').innerHTML = s;
+    drawObjBars(pa, pb, !hide);
+  }
+  $('objQuiz').onclick = () => {
+    for (let k = 0; k < 300; k++) {
+      const a = Math.floor(Math.random() * OBJS.length), b = Math.floor(Math.random() * OBJS.length);
+      if (a === b) continue;
+      const A = OBJS[a], B = OBJS[b];
+      const rv = (d) => Math.max(d.st, Math.round((d.vmax * (0.35 + 0.65 * Math.random())) / d.st) * d.st);
+      const va = +rv(A).toFixed(2), vb = +rv(B).toFixed(2), pa = A.m * va, pb = B.m * vb, r = Math.max(pa, pb) / Math.min(pa, pb);
+      if (r < 1.15 || r > 30) continue;
+      if (Math.random() < 0.6 && (A.m > B.m) === (pa > pb)) continue;   // เน้นข้อที่หลอกตา
+      setObj(0, a); setObj(1, b); OB.va = va; OB.vb = vb; $('oVa').value = va; $('oVb').value = vb;
+      OB.quiz = { ans: pa > pb ? 0 : 1, done: false }; OB.n++;
+      $('objQ').innerHTML = `<b>ข้อที่ ${OB.n}</b> อะไรมีโมเมนตัมมากกว่า?<div class="row"><button class="btn" id="oqA">${A.n}</button><button class="btn" id="oqB">${B.n}</button></div>`;
+      const pick = (i) => {
+        if (!OB.quiz || OB.quiz.done) return;
+        OB.quiz.done = true; const ok = i === OB.quiz.ans; if (ok) { OB.score++; Sound.ding(); confetti(); } else Sound.buzz();
+        $('objQ').innerHTML = (ok ? '<span class="good"><b>ถูกต้อง!</b></span>' : '<span class="bad"><b>ยังไม่ถูก</b></span>') + ` ทายถูก ${OB.score}/${OB.n} ข้อ · โมเมนตัมขึ้นกับทั้งมวลและความเร็ว (p = mv) กด 🤔 เพื่อเล่นข้อต่อไป`;
+        refreshObj();
+      };
+      $('oqA').onclick = () => pick(0); $('oqB').onclick = () => pick(1);
+      Sound.tone(660, 0.15, 'triangle', 0.2); refreshObj(); return;
+    }
+  };
+  function updateObj(dt) {
+    [[OB.va, OBJS[OB.a]], [OB.vb, OBJS[OB.b]]].forEach(([v, d], i) => {
+      const o = OB.objs[i]; if (!o) return;
+      const vis = v > 0 ? 0.04 + 0.11 * Math.log10(1 + v) : 0;
+      o.position.x += vis * dt; if (o.position.x > 0.9) o.position.x = -0.9;
+      o.children.forEach((c) => { if (c.userData && c.userData.wheels) spinWheels(c, vis * dt / 0.03); });
+      const p = d.m * v, hide = !!(OB.quiz && !OB.quiz.done);
+      const len = p > 0 ? 0.06 + 0.3 * Math.log10(1 + p) / Math.log10(1 + 240000) : 0;
+      objArrows[i].setTo(o.position.x, 0.26, OZ[i], hide ? 0 : len);
+      objLabels[i].position.set(o.position.x, i ? 0.33 : 0.42, OZ[i]);
+      objLabels[i].setText(hide ? `${d.n}  m = ${fmtM(d.m)} kg  v = ${v} m/s` : `${d.n}  p = ${fmtP(p)} kg·m/s`);
+    });
+  }
 
   // --- UI ---
   const tabs = document.querySelectorAll('#sceneA .tabs button');
@@ -620,22 +812,37 @@ function buildSceneA(root) {
   $('fM').oninput = (e) => { if (S.force.running) { e.target.value = S.sedanM; return; } S.sedanM = +e.target.value; $('sM').value = S.sedanM; refreshForce(); };
   $('mul1').onclick = () => { if (!S.force.running) { S.mul = 1; refreshForce(); } };
   $('mul2').onclick = () => { if (!S.force.running) { S.mul = 2; refreshForce(); } };
+  $('mul05').onclick = () => { if (!S.force.running) { S.mul = 0.5; refreshForce(); } };
+  $('mul3').onclick = () => { if (!S.force.running) { S.mul = 3; refreshForce(); } };
   $('pushBtn').onclick = startPush;
   $('clearForce').onclick = () => { if (S.force.running) return; S.runs = []; S.cnt.clear(); S.log = []; graph.clear(); S.force.p = 0; S.force.v = 0; S.force.t = 0; refreshForce(); };
+  const BV = () => BALLS[S.ball.kind], WV = () => WALLS[S.ball.wall];
+  $('ballKinds').innerHTML = BALLS.map((q, i) => `<button data-i="${i}">${q.n} ${q.m} kg</button>`).join('');
+  $('wallKinds').innerHTML = WALLS.map((q, i) => `<button data-i="${i}">${q.n} Δt ${q.dt} s</button>`).join('');
+  const resetBallPos = () => { const b = S.ball; b.bounced = false; b.phase = 'idle'; b.x = -0.55; };
+  $('ballKinds').querySelectorAll('button').forEach((x) => x.onclick = () => { if (S.ball.running) return; S.ball.kind = +x.dataset.i; resetBallPos(); refreshBall(); });
+  $('wallKinds').querySelectorAll('button').forEach((x) => x.onclick = () => { if (S.ball.running) return; S.ball.wall = +x.dataset.i; resetBallPos(); refreshBall(); });
+  $('bV').oninput = (e) => { if (S.ball.running) { e.target.value = S.ball.v; return; } S.ball.v = +e.target.value; resetBallPos(); refreshBall(); };
   $('ballBtn').onclick = () => {
     const b = S.ball;
     if (b.running) return;
     Object.assign(b, { running: true, phase: 'in', x: -0.55, vel: 0.5, bounced: false, tc: 0, s: 0, F: 0 });
-    const key = b.soft ? 'soft' : 'hard';
-    ballGraph.series = ballGraph.series.filter((q) => q !== b.series[key]);
-    b.series[key] = ballGraph.add(b.soft ? '#4ade80' : '#ff3333', '', b.soft ? 'rgba(74,222,128,0.35)' : 'rgba(255,51,51,0.35)');
+    const B = BV(), Wl = WV();
+    b.cur = { ball: b.kind, wall: b.wall, m: B.m, v: b.v, dt: Wl.dt, dp: 2 * B.m * b.v };
+    b.cur.F = b.cur.dp / b.cur.dt;
+    b.series = ballGraph.add(Wl.col, '', Wl.col + '55');
+    // ปรับสเกลกราฟให้เห็นทุกเส้น
+    const peaks = ballGraph.series.map((q) => q.peak || 0).concat([b.cur.F * Math.PI / 2]);
+    const tms = ballGraph.series.map((q) => q.dt || 0).concat([b.cur.dt]);
+    b.series.peak = b.cur.F * Math.PI / 2; b.series.dt = b.cur.dt;
+    const nice = (x) => { const e = Math.pow(10, Math.floor(Math.log10(x))); for (const k of [1, 2, 2.5, 5, 10]) if (k * e >= x) return k * e; return 10 * e; };
+    ballGraph.pMax = nice(Math.max(...peaks) * 1.1); ballGraph.pStep = ballGraph.pMax / 5;
+    ballGraph.tMax = nice(Math.max(...tms) * 1.15); ballGraph.tStep = ballGraph.tMax / 5;
+    ballGraph.fmt = ballGraph.pMax < 10 ? (x) => x.toFixed(1) : N;
     ballGraph.draw();
     $('ballBtn').disabled = true;
     refreshBall();
   };
-  const setWall = (soft) => { if (S.ball.running) return; S.ball.soft = soft; S.ball.bounced = false; S.ball.phase = 'idle'; S.ball.x = -0.55; refreshBall(); };
-  $('wallHard').onclick = () => setWall(false);
-  $('wallSoft').onclick = () => setWall(true);
 
   function setMode(m) {
     S.mode = m;
@@ -643,17 +850,20 @@ function buildSceneA(root) {
     $('aMom').style.display = m === 'mom' ? '' : 'none';
     $('aForce').style.display = m === 'force' ? '' : 'none';
     $('aBall').style.display = m === 'ball' ? '' : 'none';
+    $('aObj').style.display = m === 'obj' ? '' : 'none';
+    objRoot.visible = m === 'obj';
     truck.visible = m === 'mom';
-    sedan.visible = m !== 'ball';
+    sedan.visible = m === 'mom' || m === 'force';
     road.visible = m !== 'ball';
     ball.visible = m === 'ball';
-    wall.visible = m === 'ball' && !S.ball.soft;
-    foam.visible = m === 'ball' && S.ball.soft;
+    wall.visible = m === 'ball' && !WALLS[S.ball.wall].soft;
+    foam.visible = m === 'ball' && WALLS[S.ball.wall].soft;
     [truckArrow, sedanArrow, forceArrow, dpArrow, truckLabel, sedanLabel, forceLabel, dpLabel,
       ballNow, ballBefore, ballDp, ballLabel, ballDpLabel, wallForce, wallForceLabel].forEach((o) => (o.visible = false));
     if (m === 'mom') { sedan.position.z = 0.18; $('sM').value = S.sedanM; refreshMom(); }
     if (m === 'force') { sedan.position.set(-0.75, 0, 0); $('fM').value = S.sedanM; refreshForce(); requestAnimationFrame(() => graph.draw()); }
     if (m === 'ball') { ball.position.set(-0.55, 0.06, 0); refreshBall(); requestAnimationFrame(() => ballGraph.draw()); }
+    if (m === 'obj') { refreshObj(); requestAnimationFrame(refreshObj); }
   }
 
   function refreshMom() {
@@ -678,7 +888,7 @@ function buildSceneA(root) {
     Object.assign(f, { running: true, t: 0, v: 0, p: 0, s: 0, next: 0, slope: false });
     f.F = 2000 * S.mul * jitter(0.03);   // แรงจากเครื่องยนต์แต่ละครั้งแกว่งเล็กน้อย (±3%) เหมือนการทดลองจริง
     f.mul = S.mul;
-    f.series = graph.add(S.mul > 1.5 ? '#ff7326' : '#ffd91a');
+    f.series = graph.add({ 0.5: '#4ade80', 1: '#ffd91a', 2: '#ff7326', 3: '#ff3333' }[S.mul] || '#ffd91a');
     sedan.position.set(-0.75, 0, 0);
     $('pushBtn').disabled = true;
     Sound.vroom(3);
@@ -689,6 +899,8 @@ function buildSceneA(root) {
     $('fMLab').textContent = `มวลรถเก๋ง  m = ${N(S.sedanM)} kg`;
     $('mul1').classList.toggle('on', S.mul === 1);
     $('mul2').classList.toggle('on', S.mul === 2);
+    $('mul05').classList.toggle('on', S.mul === 0.5);
+    $('mul3').classList.toggle('on', S.mul === 3);
     const tShow = Math.min(f.t, 3);
     let s = `ΣF = ${N(F)} N     เวลา t = ${F1(tShow)} / 3 s\n`;
     s += `การดล J = ΣF·Δt = ${N(F * tShow)} N·s  =  Δp = ${N(f.p)} kg·m/s\n`;
@@ -701,8 +913,8 @@ function buildSceneA(root) {
     $('forceTable').innerHTML = '<tr><th>ครั้งที่</th><th>m (kg)</th><th>ΣF (N)</th><th>Δt (s)</th><th>J (N·s)</th><th>Δp (kg·m/s)</th><th>v (m/s)</th></tr>' +
       (rr.length ? rr.map((r) => r.avg ? `<tr style="${TRIAL_CSS}"><td>เฉลี่ย</td>${cells(r.v)}</tr>` : `<tr><td>${r.n}</td>${cells(r.v)}</tr>`).join('')
         : '<tr><td colspan="7" class="muted">ยังไม่มีผล กด “ออกแรง!” ค่าเดิม 3 ครั้ง ระบบจะหาค่าเฉลี่ยให้ (แถวสีทอง)</td></tr>');
-    const has1 = S.runs.some((r) => r.Fn === 2000), has2 = S.runs.some((r) => r.Fn === 4000);
-    $('forceMsg2').textContent = has1 && has2 ? 'แรง 2 เท่า กราฟชันขึ้น 2 เท่า = โมเมนตัมเปลี่ยนเร็วขึ้น 2 เท่า' : '';
+    const Fs = [...new Set(S.runs.map((r) => r.Fn))].sort((a, b) => a - b);
+    $('forceMsg2').textContent = Fs.length >= 2 ? `แรง ${N(Fs[Fs.length - 1])} N มากกว่า ${N(Fs[0])} N อยู่ ${+(Fs[Fs.length - 1] / Fs[0]).toFixed(1)} เท่า กราฟจึงชันกว่า ${+(Fs[Fs.length - 1] / Fs[0]).toFixed(1)} เท่า = โมเมนตัมเปลี่ยนเร็วกว่า ${+(Fs[Fs.length - 1] / Fs[0]).toFixed(1)} เท่า` : '';
     let massCompare = false;
     for (let i = 0; i < S.runs.length; i++) for (let j = i + 1; j < S.runs.length; j++)
       if (S.runs[i].Fn === S.runs[j].Fn && S.runs[i].m !== S.runs[j].m) massCompare = true;
@@ -711,28 +923,41 @@ function buildSceneA(root) {
   }
 
   function refreshBall() {
-    const b = S.ball, dt = b.soft ? SOFT_DT : HARD_DT;
-    $('wallHard').classList.toggle('on', !b.soft);
-    $('wallSoft').classList.toggle('on', b.soft);
-    wall.visible = S.mode === 'ball' && !b.soft;
-    foam.visible = S.mode === 'ball' && b.soft;
-    let s = 'กำหนดทิศไปทางขวาเป็นบวก (+)\nลูกบอล m = 0.5 kg วิ่งด้วยความเร็ว 4 m/s เข้าชนผนัง แล้วเด้งกลับด้วยความเร็ว 4 m/s\n' +
+    const b = S.ball, B = BALLS[b.kind], Wl = WALLS[b.wall], dt = Wl.dt;
+    b.soft = Wl.soft;
+    $('ballKinds').querySelectorAll('button').forEach((x) => x.classList.toggle('on', +x.dataset.i === b.kind));
+    $('wallKinds').querySelectorAll('button').forEach((x) => x.classList.toggle('on', +x.dataset.i === b.wall));
+    $('bVLab').textContent = `ความเร็วก่อนชน v = ${b.v} m/s (เด้งกลับด้วยความเร็วเท่าเดิม)`;
+    wall.visible = S.mode === 'ball' && !Wl.soft; foam.visible = S.mode === 'ball' && Wl.soft;
+    wall.material.color.set(Wl.c); foam.material.color.set(Wl.c);
+    ball.material.color.set(B.c); ball.scale.setScalar(B.r);
+    const m = B.m, v = b.v, p = m * v, f = (x) => +x.toFixed(3);
+    let s = `กำหนดทิศไปทางขวาเป็นบวก (+)\n${B.n} m = ${m} kg วิ่งด้วยความเร็ว ${v} m/s เข้าชน${Wl.n} แล้วเด้งกลับด้วยความเร็ว ${v} m/s\n` +
       '<span style="color:#ffd91a">สูตร  p = mv     Δp = p หลัง − p ก่อน     J = Δp = F·Δt     F = Δp / Δt</span>\n';
-    if (b.phase === 'idle') s += 'กด “ปล่อยลูกบอล” แล้วสังเกตลูกศรโมเมนตัมก่อนชนและหลังชน จากนั้นลองเปลี่ยนเป็นผนังอีกแบบ\nผนังแข็ง: Δt = 0.01 s     ผนังนุ่ม: Δt = 0.20 s';
+    if (b.phase === 'idle') s += `กด “ปล่อยลูกบอล” แล้วสังเกตลูกศรโมเมนตัมก่อนชนและหลังชน\nลองเปลี่ยนผนัง (Δt) โดยใช้ลูกบอลและความเร็วเดิม แล้วเทียบแรงดลเฉลี่ย`;
     else {
-      s += '\np ก่อนชน = mv = (0.5)(+4) = +2 kg·m/s';
+      s += `\np ก่อนชน = mv = (${m})(+${v}) = +${f(p)} kg·m/s`;
       if (b.phase === 'contact') s += '\n<span class="orange">กำลังชน... (ภาพช้าลงให้เห็นช่วงสัมผัส)</span>';
       if (b.bounced) {
-        s += '\np หลังชน = mv = (0.5)(−4) = −2 kg·m/s\nΔp = p หลัง − p ก่อน = (−2) − (+2) = −4 kg·m/s';
-        s += `\n<span class="good">การดลจากผนัง J = Δp = −4 N·s (ทิศไปทางซ้าย)</span>`;
-        s += `\nเวลาที่ลูกบอลสัมผัส${b.soft ? 'ผนังนุ่ม' : 'ผนังแข็ง'} Δt = ${dt} s`;
-        s += `\n<b>แรงดลเฉลี่ย F = Δp/Δt = 4 / ${dt} = ${N(4 / dt)} N</b>`;
+        s += `\np หลังชน = mv = (${m})(−${v}) = −${f(p)} kg·m/s\nΔp = (−${f(p)}) − (+${f(p)}) = −${f(2 * p)} kg·m/s`;
+        s += `\n<span class="good">การดลจากผนัง J = Δp = −${f(2 * p)} N·s (ทิศไปทางซ้าย)</span>`;
+        s += `\nเวลาที่สัมผัส${Wl.n} Δt = ${dt} s`;
+        s += `\n<b>แรงดลเฉลี่ย F = Δp/Δt = ${f(2 * p)} / ${dt} = ${N(2 * p / dt)} N</b>`;
       }
     }
     $('ballInfo').innerHTML = s.replace(/\n/g, '<br>');
-    $('ballMsg').textContent = b.done.hard && b.done.soft
-      ? 'Δp เท่ากัน (พื้นที่ใต้กราฟ = การดล 4 N·s เท่ากัน) แต่ผนังนุ่มยืดเวลาชนนานขึ้น 20 เท่า แรงดลจึงลดลง 20 เท่า เหมือนถุงลมนิรภัยและหมวกกันน็อก'
-      : '';
+    // เทียบผล: ลูกบอลและความเร็วเดียวกัน แต่ผนังต่างกัน
+    const rs = b.runs, last = rs[rs.length - 1];
+    const same = last ? rs.filter((r) => r.ball === last.ball && r.v === last.v && r.wall !== last.wall) : [];
+    let msg = '';
+    if (same.length) {
+      const o = same[same.length - 1], hi = o.dt < last.dt ? o : last, lo = o.dt < last.dt ? last : o;
+      msg = `Δp เท่ากัน (${f(last.dp)} kg·m/s = พื้นที่ใต้กราฟเท่ากัน) แต่${WALLS[lo.wall].n}ใช้เวลาชนนานกว่า${WALLS[hi.wall].n} ${+(lo.dt / hi.dt).toFixed(1)} เท่า แรงดลจึงลดลง ${+(lo.dt / hi.dt).toFixed(1)} เท่า เหมือนถุงลมนิรภัย หมวกกันน็อก และเบาะรองตก`;
+    } else if (rs.length >= 2) {
+      const a = rs[rs.length - 2];
+      if (a.wall === last.wall && (a.ball !== last.ball || a.v !== last.v)) msg = `ผนังเดียวกัน (Δt เท่ากัน) แต่ Δp ต่างกัน: Δp มากขึ้น แรงดลก็มากขึ้นตาม (F = Δp/Δt) มวลหรือความเร็วมากขึ้น Δp จึงมากขึ้น`;
+    }
+    $('ballMsg').textContent = msg;
   }
 
   function update(dt) {
@@ -748,6 +973,8 @@ function buildSceneA(root) {
         label.position.set(car.position.x, 0.34, z);
         label.setText(`p = ${N(p)} kg·m/s`);
       }
+    } else if (S.mode === 'obj') {
+      updateObj(dt);
     } else if (S.mode === 'force') {
       const f = S.force;
       if (f.running) {
@@ -779,10 +1006,11 @@ function buildSceneA(root) {
       dpLabel.position.set(x, 0.34, 0);
       dpLabel.setText(f.p > 1 ? `Δp = ${N(f.p)} kg·m/s` : '');
     } else {
-      const b = S.ball, R = 0.06, FACE = 0.57;
-      const physDt = b.soft ? SOFT_DT : HARD_DT;
-      const visDur = b.soft ? 1.4 : 0.45;              // ช่วงชนแสดงแบบช้าลง
-      const depth = b.soft ? 0.09 : 0.012;
+      const b = S.ball, FACE = 0.57;
+      const Bk = BALLS[b.kind], Wl = WALLS[b.wall], R = Bk.r;
+      const physDt = Wl.dt, dpMag = 2 * Bk.m * b.v;
+      const visDur = 0.4 + Math.min(1.4, physDt * 4.5);              // ช่วงชนแสดงแบบช้าลง
+      const depth = Wl.soft ? Math.min(0.12, 0.02 + physDt * 0.35) : 0.006 + physDt * 0.4;
       let pen = 0;
       if (b.running) {
         if (b.phase === 'in') {
@@ -792,14 +1020,14 @@ function buildSceneA(root) {
           b.tc += dt;
           b.s = Math.min(1, b.tc / visDur);
           pen = depth * Math.sin(Math.PI * b.s);
-          b.F = (4 / physDt) * (Math.PI / 2) * Math.sin(Math.PI * b.s);
-          const key = b.soft ? 'soft' : 'hard', ser = b.series[key];
+          b.F = (dpMag / physDt) * (Math.PI / 2) * Math.sin(Math.PI * b.s);
+          const ser = b.series;
           ser.pts.push([b.s * physDt, b.F]);
           if (b.s >= 0.5 && !b.bounced) { b.bounced = true; refreshBall(); }
           if (b.s >= 1) {
             ser.pts.push([physDt, 0]);
-            ser.tag = { t: physDt, p: b.soft ? 60 : 640, text: `${b.soft ? 'นุ่ม' : 'แข็ง'}: F เฉลี่ย ${N(4 / physDt)} N` };
-            b.phase = 'out'; b.vel = -0.5; b.F = 0; b.done[key] = true; refreshBall(); S.refreshBallTable();
+            ser.tag = { t: physDt, p: dpMag / physDt * 1.25, text: `${Wl.n}: F เฉลี่ย ${N(dpMag / physDt)} N` };
+            b.phase = 'out'; b.vel = -0.5; b.F = 0; b.runs.push(b.cur); if (b.runs.length > 6) b.runs.shift(); refreshBall(); S.refreshBallTable();
           }
           ballGraph.draw();
         } else {
@@ -808,22 +1036,23 @@ function buildSceneA(root) {
         }
       }
       ball.position.set(b.x + pen, R, 0);
-      const squash = b.phase === 'contact' && !b.soft ? 1 - 0.3 * Math.sin(Math.PI * b.s) : 1;
-      ball.scale.set(squash, 1 / Math.sqrt(squash), 1 / Math.sqrt(squash));
-      const fpen = b.soft && b.phase === 'contact' ? pen : 0;
+      const squash = b.phase === 'contact' && !Wl.soft ? 1 - 0.3 * Math.sin(Math.PI * b.s) : 1;
+      ball.scale.set(R * squash, R / Math.sqrt(squash), R / Math.sqrt(squash));
+      const fpen = Wl.soft && b.phase === 'contact' ? pen : 0;
       foam.scale.x = (0.16 - fpen) / 0.16;
       foam.position.x = 0.73 - (0.16 - fpen) / 2;
-      wallForce.setTo(b.x + pen - R - 0.01, 0.06, 0, b.phase === 'contact' ? -Math.max(0.02, b.F / 700 * 0.7) : 0, 0.016);
+      wallForce.setTo(b.x + pen - R - 0.01, 0.06, 0, b.phase === 'contact' ? -Math.max(0.03, 0.55 * b.F / (dpMag / physDt * Math.PI / 2)) : 0, 0.016);
       wallForceLabel.position.set(b.x - 0.1, 0.26, -0.15);
       wallForceLabel.setText(b.phase === 'contact' ? `แรงจากผนัง ${N(b.F)} N` : '');
-      const pShow = b.phase === 'in' ? 2 : b.phase === 'out' || b.phase === 'end' ? -2 : 0;
-      ballNow.setTo(b.x, 0.2, 0, pShow * 0.15);
+      const pm = +(Bk.m * b.v).toFixed(3), pSign = b.phase === 'in' ? 1 : b.phase === 'out' || b.phase === 'end' ? -1 : 0;
+      const aLen = 0.12 + 0.22 * Math.min(1, Math.log10(1 + pm * 3) / Math.log10(1 + 16 * 3));
+      ballNow.setTo(b.x, 0.2, 0, pSign * aLen);
       ballLabel.position.set(b.x, 0.3, 0);
-      ballLabel.setText(pShow ? `p = ${pShow > 0 ? '+2' : '−2'} kg·m/s` : '');
-      ballBefore.setTo(0.15, 0.2, -0.2, b.bounced ? 0.3 : 0);
-      ballDp.setTo(0.5, 0.2, 0.2, b.bounced && b.phase !== 'contact' ? -0.6 : 0, 0.016);
+      ballLabel.setText(pSign ? `p = ${pSign > 0 ? '+' : '−'}${pm} kg·m/s` : '');
+      ballBefore.setTo(0.15, 0.2, -0.2, b.bounced ? aLen : 0);
+      ballDp.setTo(0.5, 0.2, 0.2, b.bounced && b.phase !== 'contact' ? -2 * aLen : 0, 0.016);
       ballDpLabel.position.set(0.2, 0.3, 0.2);
-      ballDpLabel.setText(b.bounced && b.phase !== 'contact' ? 'Δp = −4 kg·m/s  (J จากผนัง)' : '');
+      ballDpLabel.setText(b.bounced && b.phase !== 'contact' ? `Δp = −${+(2 * pm).toFixed(3)} kg·m/s  (J จากผนัง)` : '');
     }
   }
 
@@ -849,16 +1078,15 @@ function buildSceneA(root) {
 
   // ตารางแท็บลูกบอล
   function refreshBallTable() {
-    const b = S.ball;
-    const row = (name, done, dt) => `<tr><td>${name}</td>` + (done
-      ? `<td>+2</td><td>−2</td><td>−4</td><td>${dt.toFixed(2)}</td><td>${N(4 / dt)}</td>` : '<td></td><td></td><td></td><td></td><td></td>') + '</tr>';
-    $('ballTable').innerHTML = '<tr><th>ผนัง</th><th>p ก่อน</th><th>p หลัง</th><th>Δp (kg·m/s)</th><th>Δt (s)</th><th>F เฉลี่ย (N)</th></tr>' +
-      row('แข็ง (คอนกรีต)', b.done.hard, HARD_DT) + row('นุ่ม (ฟองน้ำ)', b.done.soft, SOFT_DT);
+    const rs = S.ball.runs, f = (x) => +x.toFixed(3);
+    $('ballTable').innerHTML = '<tr><th>ลูกบอล</th><th>ผนัง</th><th>p ก่อน</th><th>p หลัง</th><th>Δp (kg·m/s)</th><th>Δt (s)</th><th>F เฉลี่ย (N)</th></tr>' +
+      (rs.length ? rs.map((r) => `<tr><td>${BALLS[r.ball].n} ${r.m} kg · ${r.v} m/s</td><td>${WALLS[r.wall].n}</td><td>+${f(r.m * r.v)}</td><td>−${f(r.m * r.v)}</td><td>−${f(r.dp)}</td><td>${r.dt}</td><td>${N(r.F)}</td></tr>`).join('')
+        : '<tr><td colspan="7" class="muted">ยังไม่มีผล ลองใช้ลูกบอลเดิม ความเร็วเดิม แต่เปลี่ยนผนัง</td></tr>');
   }
   S.refreshBallTable = refreshBallTable;
   $('ballClr').onclick = () => {
     const b = S.ball; if (b.running) return;
-    b.done = {}; b.series = {}; ballGraph.series = []; ballGraph.draw();
+    b.runs = []; b.series = null; ballGraph.series = []; ballGraph.draw();
     Object.assign(b, { phase: 'idle', bounced: false, x: -0.55 });
     refreshBallTable(); refreshBall();
   };
@@ -898,6 +1126,14 @@ function buildSceneA(root) {
         `<b>ขั้น 3</b> รถเก๋ง p = ${N(S.sedanM)} × ${N(S.sedanV)} = <b>${N(pS)} kg·m/s</b>`,
         pT > 0 ? `<b>ขั้น 4</b> ถ้าอยากให้รถเก๋งมีโมเมนตัมเท่ารถบรรทุก v = p ÷ m = ${N(pT)} ÷ ${N(S.sedanM)} ≈ <b>${(pT / S.sedanM).toFixed(1)} m/s</b> (${N(pT / S.sedanM * 3.6)} km/h)` : 'รถบรรทุกหยุดนิ่ง โมเมนตัมเป็นศูนย์']);
     }
+    if (S.mode === 'obj') {
+      const A = OBJS[OB.a], B = OBJS[OB.b], pa = A.m * OB.va, pb = B.m * OB.vb;
+      return W([`<b>ขั้น 1</b> สูตร p = mv ต้องดูทั้งมวลและความเร็ว`,
+        `<b>ขั้น 2</b> ${A.n} p = ${fmtM(A.m)} × ${OB.va} = <b>${fmtP(pa)} kg·m/s</b>`,
+        `<b>ขั้น 3</b> ${B.n} p = ${fmtM(B.m)} × ${OB.vb} = <b>${fmtP(pb)} kg·m/s</b>`,
+        pa > 0 && pb > 0 ? `<b>ขั้น 4</b> เทียบ ${fmtP(Math.max(pa, pb))} ÷ ${fmtP(Math.min(pa, pb))} ≈ <b>${(Math.max(pa, pb) / Math.min(pa, pb)).toFixed(1)} เท่า</b>` : '<b>ขั้น 4</b> วัตถุที่หยุดนิ่งมีโมเมนตัมเป็นศูนย์',
+        '<b>ข้อสังเกต</b> ของหนักที่ช้ามาก (เต่า) อาจมีโมเมนตัมน้อยกว่าของเบาที่เร็วมาก (ลูกเทนนิสเสิร์ฟ)']);
+    }
     if (S.mode === 'force') {
       const r = S.runs[S.runs.length - 1];
       const F = r ? r.F : 2000 * S.mul, m = r ? r.m : S.sedanM;
@@ -908,13 +1144,14 @@ function buildSceneA(root) {
         `<b>ขั้น 4</b> รถเริ่มจากหยุดนิ่ง v = Δp ÷ m = ${N(F * 3)} ÷ ${N(m)} = <b>${(F * 3 / m).toFixed(1)} m/s</b>`,
         `<b>สรุป</b> ความชันกราฟ p–t = Δp/Δt = ${N(F * 3)} ÷ 3 = ${N(F)} N = แรงลัพธ์พอดี`]);
     }
-    const b = S.ball;
-    return W(['<b>ขั้น 1</b> กำหนดทิศขวาเป็นบวก ลูกบอล m = 0.5 kg',
-      '<b>ขั้น 2</b> p ก่อนชน = 0.5 × (+4) = +2 kg·m/s · p หลังชน = 0.5 × (−4) = −2 kg·m/s',
-      '<b>ขั้น 3</b> Δp = p หลัง − p ก่อน = (−2) − (+2) = <b>−4 kg·m/s</b> (ขนาด 4)',
-      `<b>ขั้น 4</b> ผนังแข็ง Δt = ${HARD_DT} s → F = 4 ÷ ${HARD_DT} = <b>${N(4 / HARD_DT)} N</b>`,
-      `<b>ขั้น 5</b> ผนังนุ่ม Δt = ${SOFT_DT} s → F = 4 ÷ ${SOFT_DT} = <b>${N(4 / SOFT_DT)} N</b>`,
-      `<b>สรุป</b> Δp เท่ากัน แต่เวลาชนนานขึ้น ${SOFT_DT / HARD_DT} เท่า แรงจึงลดลง ${SOFT_DT / HARD_DT} เท่า` + (b.done.hard && b.done.soft ? '' : ' (ลองปล่อยลูกบอลทั้งสองแบบ)')]);
+    const b = S.ball, Bk = BALLS[b.kind], Wl = WALLS[b.wall], m = Bk.m, v = b.v, p = +(m * v).toFixed(3), dp = +(2 * m * v).toFixed(3);
+    const other = WALLS.find((w) => w !== Wl && w.soft !== Wl.soft) || WALLS[3];
+    return W([`<b>ขั้น 1</b> กำหนดทิศขวาเป็นบวก ${Bk.n} m = ${m} kg ความเร็ว ${v} m/s`,
+      `<b>ขั้น 2</b> p ก่อนชน = ${m} × (+${v}) = +${p} kg·m/s · p หลังชน = ${m} × (−${v}) = −${p} kg·m/s`,
+      `<b>ขั้น 3</b> Δp = p หลัง − p ก่อน = (−${p}) − (+${p}) = <b>−${dp} kg·m/s</b> (ขนาด ${dp})`,
+      `<b>ขั้น 4</b> ${Wl.n} Δt = ${Wl.dt} s → F = ${dp} ÷ ${Wl.dt} = <b>${N(dp / Wl.dt)} N</b>`,
+      `<b>ขั้น 5</b> ถ้าเป็น${other.n} Δt = ${other.dt} s → F = ${dp} ÷ ${other.dt} = <b>${N(dp / other.dt)} N</b>`,
+      `<b>สรุป</b> Δp เท่ากัน แต่เวลาชนยิ่งนาน แรงดลเฉลี่ยยิ่งน้อย (F = Δp/Δt)`]);
   }
 
   setMode('mom');
@@ -935,6 +1172,27 @@ function buildSceneB(root) {
     { q: '5. รถพลังลูกโป่ง เคลื่อนที่ไปข้างหน้าได้ เพราะเหตุใด', c: ['ลูกโป่งดูดอากาศเข้ามาทางด้านหน้า', 'ลมพุ่งออกทางด้านหลัง ลมจึงดันรถไปข้างหน้า', 'น้ำหนักของลูกโป่งดึงรถไป', 'ล้อหมุนเอง โดยไม่มีแรงกระทำ'], a: 1,
       e: 'ลูกโป่งดันลมออกทางด้านหลัง ลมจึงออกแรงดันรถไปข้างหน้า (แรงกิริยา และ ปฏิกิริยา) แรงลัพธ์ทำให้โมเมนตัมของรถเพิ่มขึ้นในทิศเดียวกับแรง' },
   ];
+  // คลังข้อสอบเพิ่มเติม (ใช้ตอนกด “สุ่มชุดใหม่”)
+  const EXTRA = [
+    { q: 'หน่วยของโมเมนตัมในระบบ SI คือข้อใด', c: ['N', 'kg·m/s', 'kg·m/s²', 'J'], a: 1, e: 'p = mv หน่วยจึงเป็น kg × m/s = kg·m/s (เท่ากับ N·s ซึ่งเป็นหน่วยของการดล)' },
+    { q: 'รถ A มวล 1,000 kg วิ่ง 20 m/s รถ B มวล 2,000 kg วิ่ง 10 m/s รถคันใดมีโมเมนตัมมากกว่า', c: ['รถ A', 'รถ B', 'เท่ากัน', 'บอกไม่ได้'], a: 2, e: 'p_A = 1,000 × 20 = 20,000 และ p_B = 2,000 × 10 = 20,000 kg·m/s จึงเท่ากัน' },
+    { q: 'โมเมนตัมเป็นปริมาณชนิดใด', c: ['ปริมาณสเกลาร์', 'ปริมาณเวกเตอร์ ทิศเดียวกับความเร็ว', 'ปริมาณเวกเตอร์ ทิศตรงข้ามกับความเร็ว', 'ปริมาณที่ไม่มีหน่วย'], a: 1, e: 'p = mv มวลเป็นบวกเสมอ โมเมนตัมจึงมีทิศเดียวกับความเร็ว' },
+    { q: 'วัตถุมวล 2 kg ความเร็วเพิ่มจาก 3 m/s เป็น 7 m/s ในทิศเดิม การเปลี่ยนโมเมนตัมเท่าใด', c: ['4 kg·m/s', '8 kg·m/s', '14 kg·m/s', '20 kg·m/s'], a: 1, e: 'Δp = m(v − u) = 2 × (7 − 3) = 8 kg·m/s' },
+    { q: 'แรงลัพธ์ 10 N กระทำต่อวัตถุนาน 0.5 s โมเมนตัมของวัตถุเปลี่ยนไปเท่าใด', c: ['5 kg·m/s', '10.5 kg·m/s', '20 kg·m/s', '0.05 kg·m/s'], a: 0, e: 'Δp = ΣF·Δt = 10 × 0.5 = 5 kg·m/s' },
+    { q: 'ถ้ามวลเท่าเดิม แต่ความเร็วเพิ่มเป็น 2 เท่า โมเมนตัมจะเป็นอย่างไร', c: ['เท่าเดิม', 'เพิ่มเป็น 2 เท่า', 'เพิ่มเป็น 4 เท่า', 'ลดลงครึ่งหนึ่ง'], a: 1, e: 'p = mv แปรผันตรงกับความเร็ว ความเร็ว 2 เท่า โมเมนตัมจึง 2 เท่า (พลังงานจลน์ต่างหากที่เพิ่ม 4 เท่า)' },
+    { q: 'ลูกบอล 0.5 kg วิ่ง 4 m/s ชนผนังแล้วเด้งกลับด้วยอัตราเร็ว 4 m/s ขนาดของการเปลี่ยนโมเมนตัมเท่าใด', c: ['0 kg·m/s', '2 kg·m/s', '4 kg·m/s', '8 kg·m/s'], a: 2, e: 'กำหนดทิศเข้าหาผนังเป็นบวก Δp = (0.5)(−4) − (0.5)(+4) = −4 kg·m/s ขนาด 4 (ไม่ใช่ 0 เพราะทิศเปลี่ยน)' },
+    { q: 'รถพลังลูกโป่ง ถ้าเพิ่มมวลรถแต่แรงจากลมและเวลาพ่นเท่าเดิม ผลจะเป็นอย่างไร', c: ['Δp เท่าเดิม แต่ความเร็วรถลดลง', 'Δp เพิ่มขึ้น ความเร็วเพิ่มขึ้น', 'Δp ลดลง ความเร็วเท่าเดิม', 'รถไม่เคลื่อนที่'], a: 0, e: 'J = F·Δt เท่าเดิม Δp จึงเท่าเดิม แต่ v = Δp/m รถหนักขึ้นจึงได้ความเร็วน้อยลง' },
+    { q: 'ข้อใดเป็นคู่แรงกิริยา–ปฏิกิริยาของรถพลังลูกโป่ง', c: ['น้ำหนักรถ กับ แรงที่พื้นดันรถ', 'ลูกโป่งดันลมไปข้างหลัง กับ ลมดันลูกโป่งไปข้างหน้า', 'แรงเสียดทาน กับ แรงจากลม', 'ล้อหน้า กับ ล้อหลัง'], a: 1, e: 'คู่แรงกิริยา–ปฏิกิริยากระทำต่อวัตถุคนละก้อน ขนาดเท่ากัน ทิศตรงข้าม: ลูกโป่งดันลม ↔ ลมดันลูกโป่ง' },
+    { q: 'ความชันของกราฟโมเมนตัม–เวลา (p–t) บอกปริมาณใด', c: ['มวล', 'ความเร็ว', 'แรงลัพธ์', 'การกระจัด'], a: 2, e: 'ความชัน = Δp/Δt = ΣF จึงเป็นแรงลัพธ์ที่กระทำต่อวัตถุ' },
+  ];
+  const Q_MAIN = Q.slice();
+  let qSet = 'main';
+  function useSet(m) {
+    qSet = m; Q.length = 0;
+    if (m === 'main') Q.push(...Q_MAIN);
+    else { const pool = Q_MAIN.concat(EXTRA).map((x) => x); for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+      pool.slice(0, 5).forEach((x, k) => Q.push({ ...x, q: `${k + 1}. ` + x.q.replace(/^\d+\.\s*/, '') })); }
+  }
   const L = ['ก.', 'ข.', 'ค.', 'ง.'];
   let idx = 0, score = 0, answered = false;
   const results = [];
@@ -961,17 +1219,19 @@ function buildSceneB(root) {
       const comment = score === Q.length ? 'เยี่ยมมาก!' : score >= 3 ? 'ดีมาก' : 'ลองทบทวนอีกครั้งนะ';
       if (score === Q.length) { Sound.fanfare(); confetti(); }
       body.innerHTML = `<div class="score">คะแนนของคุณ ${score} / ${Q.length}</div><div class="msg" style="text-align:center">${comment}</div>
-        <div class="info muted" style="text-align:center">จดคะแนนลงในใบกิจกรรมที่ 1 ข้อ 5 ได้เลย</div>
-        <div class="row"><button class="btn on" id="qRestart">ทำใหม่</button></div>`;
-      $('qRestart').onclick = () => { idx = 0; score = 0; results.length = 0; answered = false; paintLights(); render(); };
+        <div class="info muted" style="text-align:center">${qSet === 'main' ? 'จดคะแนนลงในใบกิจกรรมที่ 1 ข้อ 5 ได้เลย' : 'ชุดสุ่มใช้ฝึกเพิ่ม (คะแนนที่จดลงใบกิจกรรมให้ใช้ชุดหลัก)'}</div>
+        <div class="row"><button class="btn on" id="qRestart">ทำชุดหลักใหม่</button><button class="btn" id="qRand" style="background:#7c3aed">🎲 สุ่มชุดใหม่ (คลัง 15 ข้อ)</button></div>`;
+      $('qRestart').onclick = () => { useSet('main'); idx = 0; score = 0; results.length = 0; answered = false; paintLights(); render(); };
+      $('qRand').onclick = () => { useSet('rand'); idx = 0; score = 0; results.length = 0; answered = false; paintLights(); render(); };
       return;
     }
     const q = Q[idx];
-    $('qHead').textContent = `แบบทดสอบ ข้อ ${idx + 1} / ${Q.length}     คะแนน ${score}`;
-    body.innerHTML = `<div class="q">${q.q}</div>` +
+    $('qHead').textContent = `${qSet === 'main' ? 'ชุดหลัก' : 'ชุดสุ่ม'} ข้อ ${idx + 1} / ${Q.length}     คะแนน ${score}`;
+    body.innerHTML = (idx === 0 ? `<div class="chips"><button id="qSetMain" class="${qSet === 'main' ? 'on' : ''}">ชุดหลัก 5 ข้อ</button><button id="qSetRand" class="${qSet === 'rand' ? 'on' : ''}">🎲 สุ่มจากคลัง 15 ข้อ</button></div>` : '') + `<div class="q">${q.q}</div>` +
       q.c.map((c, i) => `<button class="choice" data-i="${i}">${L[i]} ${c}</button>`).join('') +
       `<div class="info" id="qFeed"></div><div class="row"><button class="btn on" id="qNext" style="display:none">${idx === Q.length - 1 ? 'ดูคะแนน' : 'ข้อต่อไป'}</button></div>`;
     body.querySelectorAll('.choice').forEach((b) => b.onclick = () => answer(+b.dataset.i));
+    if (idx === 0) { $('qSetMain').onclick = () => { if (!answered) { useSet('main'); render(); } }; $('qSetRand').onclick = () => { if (!answered) { useSet('rand'); render(); } }; }
     $('qNext').onclick = () => { idx++; answered = false; render(); };
     answered = false;
   }
@@ -990,7 +1250,7 @@ function buildSceneB(root) {
       else if (k === i) b.classList.add('wrong');
     });
     $('qFeed').innerHTML = (ok ? '<span class="good"><b>ถูกต้อง!</b></span> ' : '<span class="bad"><b>เฉลย</b></span> ') + q.e;
-    $('qHead').textContent = `แบบทดสอบ ข้อ ${idx + 1} / ${Q.length}     คะแนน ${score}`;
+    $('qHead').textContent = `${qSet === 'main' ? 'ชุดหลัก' : 'ชุดสุ่ม'} ข้อ ${idx + 1} / ${Q.length}     คะแนน ${score}`;
     $('qNext').style.display = '';
   }
 
@@ -1007,9 +1267,12 @@ function buildSceneC(root) {
   const sizeNames = ['เล็ก', 'กลาง', 'ใหญ่'];
   const thrustF0 = [0.12, 0.16, 0.20];      // แรงจากลมสูงสุด (N)
   const thrustT = [1.0, 1.3, 1.6];          // เวลาที่ลมพ่น (s)
+  // หลอดหัวฉีด: แคบ = แรงน้อยแต่พ่นนาน, กว้าง = แรงมากแต่พ่นสั้น (การดลจากลม F·Δt ใกล้เคียงกัน)
+  const NOZ = [{ n: 'แคบ', f: 0.6, t: 1.667 }, { n: 'ปกติ', f: 1, t: 1 }, { n: 'กว้าง', f: 1.6, t: 0.625 }];
+  const FLOORS = [{ n: 'กระเบื้อง', k: 0.8 }, { n: 'พื้นไม้', k: 1 }, { n: 'พรม', k: 2 }];
   const muSmooth = 0.08, muRough = 0.20, dragK = 0.004, g = 9.81;
   const trackM = 5, WPM = 0.3, startX = -0.75;
-  const S = { t1: -1, t2: -1, size: 1, massG: 60, smooth: true, running: false, simT: 0, vel: 0, dist: 0, pMax: 0, net: 0, acc: 0, next: 0, trial: 0, results: [], cnt2: trialCounter(), jit: 1, series: null };
+  const S = { t1: -1, t2: -1, size: 1, massG: 60, smooth: true, noz: 1, floor: 1, nb: 1, running: false, simT: 0, vel: 0, dist: 0, pMax: 0, net: 0, acc: 0, next: 0, trial: 0, results: [], cnt2: trialCounter(), jit: 1, series: null };
 
   // ลู่ทดลอง
   const track = new THREE.Mesh(new THREE.BoxGeometry(trackM * WPM + 0.1, 0.008, 0.22), mat(0x2f3646));
@@ -1033,6 +1296,7 @@ function buildSceneC(root) {
   }
   const balloon = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), mat(0xff6fa8, { roughness: 0.35 }));
   car.add(balloon);
+  const balloon2 = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), mat(0x7cc7ff, { roughness: 0.35 })); balloon2.visible = false; car.add(balloon2);
   const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.07, 10), mat(0xffffff));
   nozzle.rotation.z = Math.PI / 2; nozzle.position.set(-0.075, 0.045, 0); car.add(nozzle);
   const puffs = [];
@@ -1057,15 +1321,26 @@ function buildSceneC(root) {
   $('launchBtn').onclick = launch;
   $('clearC').onclick = () => { if (S.running) return; S.results = []; S.cnt2.clear(); S.trial = 0; graph.clear(); fGraph.clear(); $('cArea').innerHTML = ''; resetCar(); refreshTable(); $('cLive').textContent = 'ปรับตัวแปร แล้วกด “ปล่อยรถ!”'; };
 
-  const mu = () => (S.smooth ? muSmooth : muRough);
-  const thrust = (t) => (t < thrustT[S.size] ? thrustF0[S.size] * (S.jit || 1) * (1 - t / thrustT[S.size]) : 0);
+  const mu = () => +((S.smooth ? muSmooth : muRough) * FLOORS[S.floor].k).toFixed(3);
+  const F0n = () => thrustF0[S.size] * NOZ[S.noz].f * S.nb, Tn = () => thrustT[S.size] * NOZ[S.noz].t;
+  const thrust = (t) => (t < Tn() ? F0n() * (S.jit || 1) * (1 - t / Tn()) : 0);
+  const chipRow = (id, arr, key, label) => { $(id).innerHTML = arr.map((o, i) => `<button data-i="${i}">${label(o, i)}</button>`).join('');
+    $(id).querySelectorAll('button').forEach((b) => b.onclick = () => { if (S.running) return; S[key] = +b.dataset.i; refreshSetting(); }); };
+  chipRow('nozRow', NOZ, 'noz', (o) => `หลอด${o.n}`);
+  chipRow('floorRow', FLOORS, 'floor', (o) => o.n);
+  $('nbRow').innerHTML = '<button data-n="1">ลูกโป่ง 1 ลูก</button><button data-n="2">ลูกโป่ง 2 ลูก</button>';
+  $('nbRow').querySelectorAll('button').forEach((b) => b.onclick = () => { if (S.running) return; S.nb = +b.dataset.n; refreshSetting(); });
 
   function refreshSetting() {
     document.querySelectorAll('#sizeRow button').forEach((b) => b.classList.toggle('on', +b.dataset.size === S.size));
     $('wSmooth').classList.toggle('on', S.smooth); $('wRough').classList.toggle('on', !S.smooth);
+    $('nozRow').querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.i === S.noz));
+    $('floorRow').querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.i === S.floor));
+    $('nbRow').querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.n === S.nb));
+    balloon2.visible = S.nb === 2; nozzle.scale.set([0.6, 1, 1.8][S.noz], 1, [0.6, 1, 1.8][S.noz]);
     const m = S.massG / 1000;
     $('cMLab').textContent = `มวลรถ  m = ${S.massG} g  (${F3(m)} kg)`;
-    $('cSetting').textContent = `แรงจากลมสูงสุด ${F2(thrustF0[S.size])} N  พ่นนาน ${F1(thrustT[S.size])} s     แรงเสียดทาน ${F3(mu() * m * g)} N`;
+    $('cSetting').textContent = `แรงจากลมสูงสุด ${F2(F0n())} N  พ่นนาน ${F2(Tn())} s  (การดลจากลม ≈ ${F3(F0n() * Tn() / 2)} N·s)     แรงเสียดทาน ${F3(mu() * m * g)} N (μ = ${mu()})`;
     if (!S.running) setBalloon(1);
   }
 
@@ -1074,7 +1349,8 @@ function buildSceneC(root) {
   function setBalloon(left) {
     const r = [0.03, 0.04, 0.05][S.size] * left;
     balloon.scale.setScalar(r);
-    balloon.position.set(0.0, 0.036 + r, 0);
+    balloon.position.set(0.0, 0.036 + r, S.nb === 2 ? -0.022 : 0);
+    balloon2.scale.setScalar(r); balloon2.position.set(0.0, 0.036 + r, 0.022);
   }
 
   function launch() {
@@ -1088,10 +1364,11 @@ function buildSceneC(root) {
     fSeries = fGraph.add('#ff6b6b', '', 'rgba(255,107,107,0.35)');
     S.Jpos = 0; S.t1 = -1; S.t2 = -1;
     $('cArea').innerHTML = '';
-    Sound.whoosh(thrustT[S.size] + 0.3);
-    S.stuck = thrustF0[S.size] * S.jit <= mu() * (S.massG / 1000) * g;
+    Sound.whoosh(Tn() + 0.3);
+    S.stuck = F0n() * S.jit <= mu() * (S.massG / 1000) * g;
+    fGraph.pMax = Math.max(0.2, Math.ceil(F0n() * 1.1 / 0.1) * 0.1); fGraph.pStep = fGraph.pMax > 0.4 ? 0.1 : 0.05;
     $('launchBtn').disabled = true;
-    if (S.stuck) $('cLive').innerHTML = '<span class="bad"><b>แรงจากลมน้อยกว่าแรงเสียดทาน รถไม่ออกตัว!</b></span><br>ลองลดมวลรถ ใช้ล้อลื่น หรือใช้ลูกโป่งใหญ่ขึ้น';
+    if (S.stuck) $('cLive').innerHTML = '<span class="bad"><b>แรงจากลมน้อยกว่าแรงเสียดทาน รถไม่ออกตัว!</b></span><br>ลองลดมวลรถ ใช้ล้อลื่น พื้นลื่นขึ้น ลูกโป่งใหญ่ขึ้น หรือเพิ่มเป็น 2 ลูก';
   }
 
   function step(h) {
@@ -1107,14 +1384,15 @@ function buildSceneC(root) {
     S.pMax = Math.max(S.pMax, m * S.vel);
     if (S.net > 0) S.Jpos += S.net * h;
     while (S.next <= S.simT && S.next <= 6) { S.series.pts.push([S.next, m * S.vel]); fSeries.pts.push([S.next, S.net]); S.next += 0.05; }
-    if ((S.simT > thrustT[S.size] && S.vel <= 0) || S.simT > 20) finish();
+    if ((S.simT > Tn() && S.vel <= 0) || S.simT > 20) finish();
   }
 
   function finish() {
     S.running = false;
     $('launchBtn').disabled = false;
-    const key = [S.size, S.massG, S.smooth].join('|'), n = S.cnt2.next(key);
-    S.results.push({ key, n, label: [sizeNames[S.size], S.massG, S.smooth ? 'ลื่น' : 'ฝืด'], v: [S.pMax, S.dist] });
+    const key = [S.size, S.massG, S.smooth, S.noz, S.floor, S.nb].join('|'), n = S.cnt2.next(key);
+    S.results.push({ key, n, label: [sizeNames[S.size] + (S.nb === 2 ? ' ×2' : ''), S.massG, (S.smooth ? 'ลื่น' : 'ฝืด'), `หลอด${NOZ[S.noz].n} · ${FLOORS[S.floor].n}`], v: [S.pMax, S.dist] });
+    if (S.pMax > graph.pMax * 0.95) { graph.pMax = Math.ceil(S.pMax * 1.15 / 0.05) * 0.05; graph.pStep = graph.pMax > 0.3 ? 0.1 : 0.05; graph.draw(); }
     if (S.results.length > 12) S.results.shift();
     if (S.stuck || S.dist < 0.001) $('cLive').innerHTML = `<span class="bad">ครั้งที่ ${n} รถไม่ออกตัว</span> เพราะแรงจากลมน้อยกว่าแรงเสียดทาน`;
     else $('cLive').innerHTML = `จบการทดลองครั้งที่ ${n} จาก 3 ${n < 3 ? '(ปล่อยซ้ำค่าเดิมอีก ' + (3 - n) + ' ครั้ง)' : '— ครบแล้ว ดูค่าเฉลี่ยในแถวสีทอง'}<br>p สูงสุด = ${F3(S.pMax)} kg·m/s     ระยะทาง = ${F2(S.dist)} m` + (S.dist >= 3 ? '   <span class="good"><b>ไกลเกิน 3 m!</b></span>' : '');
@@ -1131,9 +1409,9 @@ function buildSceneC(root) {
 
   function refreshTable() {
     const rr = withAverages(S.results);
-    $('cTable').innerHTML = '<tr><th>ลูกโป่ง</th><th>มวล (g)</th><th>ล้อ</th><th>ครั้งที่</th><th>p สูงสุด (kg·m/s)</th><th>ระยะ (m)</th></tr>' +
-      (rr.length ? rr.map((r) => `<tr${r.avg ? ` style="${TRIAL_CSS}"` : ''}><td>${r.label[0]}</td><td>${r.label[1]}</td><td>${r.label[2]}</td><td>${r.avg ? 'เฉลี่ย' : r.n}</td><td>${F3(r.v[0])}</td><td>${F2(r.v[1])}</td></tr>`).join('')
-        : '<tr><td colspan="6" class="muted">ยังไม่มีผล ปล่อยรถค่าเดิม 3 ครั้งต่อชุด ระบบจะหาค่าเฉลี่ยให้ (แถวสีทอง)</td></tr>');
+    $('cTable').innerHTML = '<tr><th>ลูกโป่ง</th><th>มวล (g)</th><th>ล้อ</th><th>หลอด · พื้น</th><th>ครั้งที่</th><th>p สูงสุด (kg·m/s)</th><th>ระยะ (m)</th></tr>' +
+      (rr.length ? rr.map((r) => `<tr${r.avg ? ` style="${TRIAL_CSS}"` : ''}><td>${r.label[0]}</td><td>${r.label[1]}</td><td>${r.label[2]}</td><td>${r.label[3]}</td><td>${r.avg ? 'เฉลี่ย' : r.n}</td><td>${F3(r.v[0])}</td><td>${F2(r.v[1])}</td></tr>`).join('')
+        : '<tr><td colspan="7" class="muted">ยังไม่มีผล ปล่อยรถค่าเดิม 3 ครั้งต่อชุด ระบบจะหาค่าเฉลี่ยให้ (แถวสีทอง)</td></tr>');
   }
 
   function spawnPuff() {
@@ -1150,14 +1428,14 @@ function buildSceneC(root) {
       const m = S.massG / 1000;
       car.position.x = startX + Math.min(S.dist, trackM + 0.3) * WPM;
       for (const w of wheels) w.rotation.y += S.vel * WPM / 0.02 * dt;
-      const T = thrustT[S.size];
+      const T = Tn();
       setBalloon(Math.max(0.3, Math.sqrt(Math.max(0, Math.min(1, 1 - S.simT / T)))));
       if (thrust(S.simT) > 0) { puffTimer += dt; while (puffTimer > 0.03) { puffTimer -= 0.03; spawnPuff(); } }
       const cx = car.position.x;
-      forceArrow.setTo(cx, 0.17, 0, S.net / 0.2 * 0.18);
+      forceArrow.setTo(cx, 0.17, 0, Math.max(-0.3, Math.min(0.3, S.net / 0.2 * 0.18)));
       forceLabel.position.set(cx, 0.21, -0.07);
       forceLabel.setText(Math.abs(S.net) > 0.0005 ? `ΣF = ${F2(S.net)} N` : '');
-      pArrow.setTo(cx, 0.25, 0, m * S.vel / 0.15 * 0.3);
+      pArrow.setTo(cx, 0.25, 0, Math.min(0.45, m * S.vel / 0.15 * 0.3));
       pLabel.position.set(cx, 0.3, 0);
       pLabel.setText(S.vel > 0.001 ? `p = ${F3(m * S.vel)} kg·m/s` : '');
       graph.draw();
@@ -1189,17 +1467,18 @@ function buildSceneC(root) {
   function drawPair() {
     const Th = S.running ? thrust(S.simT) : 0, cx = car.position.x;
     if (!showPair || Th <= 0) { airArrow.visible = reArrow.visible = false; airLab.setText(''); reLab.setText(''); return; }
-    const len = Th / 0.2 * 0.16;
+    const len = Math.min(0.3, Th / 0.2 * 0.16);
     airArrow.setTo(cx - 0.115, 0.045, 0.02, -len, 0.008);
     reArrow.setTo(cx - 0.07, 0.115, 0.02, len, 0.008);
     airLab.position.set(cx - 0.2, 0.09, 0.12); airLab.setText(`รถดันอากาศไปข้างหลัง ${F3(Th)} N`);
     reLab.position.set(cx + 0.05, 0.155, 0.12); reLab.setText(`อากาศดันรถไปข้างหน้า ${F3(Th)} N`);
   }
   function explain() {
-    const m = S.massG / 1000, fr = mu() * m * g, F0 = thrustF0[S.size];
+    const m = S.massG / 1000, fr = mu() * m * g, F0 = F0n();
     const last = S.results[S.results.length - 1];
     const L = [`<b>ขั้น 1</b> มวลรถ ${S.massG} g = ${F3(m)} kg · แรงเสียดทาน f = μmg = ${mu()} × ${F3(m)} × 9.81 = <b>${F3(fr)} N</b>`,
       `<b>ขั้น 2</b> แรงจากลมสูงสุด ${F2(F0)} N ${F0 > fr ? `มากกว่าแรงเสียดทาน รถจึงออกตัวได้ · แรงลัพธ์ตอนเริ่ม ΣF = ${F2(F0)} − ${F3(fr)} = <b>${F3(F0 - fr)} N</b>` : '<span class="bad">น้อยกว่าแรงเสียดทาน รถจึงไม่ออกตัว</span>'}`,
+      `<b>ตัวแปรที่เลือก</b> ลูกโป่ง${sizeNames[S.size]} ${S.nb} ลูก · หลอด${NOZ[S.noz].n} (แรง ×${NOZ[S.noz].f} พ่นนาน ×${NOZ[S.noz].t}) · ${FLOORS[S.floor].n} (μ = ${mu()})`,
       `<b>ขั้น 3</b> ความเร่งตอนเริ่ม a = ΣF ÷ m = ${F3(Math.max(0, F0 - fr))} ÷ ${F3(m)} = <b>${F2(Math.max(0, F0 - fr) / m)} m/s²</b>`];
     if (last && S.pMax > 0.0005) {
       L.push(`<b>ขั้น 4</b> ครั้งล่าสุด p สูงสุด = <b>${F3(S.pMax)} kg·m/s</b> → ความเร็วสูงสุด v = p ÷ m = ${F3(S.pMax)} ÷ ${F3(m)} = <b>${F2(S.pMax / m)} m/s</b>`);
@@ -1532,28 +1811,92 @@ const KIT = (() => {
       if (paper) { const p = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.72), new THREE.MeshStandardMaterial({ color: 0xf3efe4, roughness: 1 })); p.position.z = -0.002; g.add(p); }
       return g;
     }
-    let lastPh = -1, W = innerWidth, H = innerHeight;
-    function fit(obj) {
+    let W = innerWidth, H = innerHeight, lastKey = '', lastObj = null, touched = false, refitT = 0;
+    renderer.domElement.addEventListener('pointerdown', () => { touched = true; });
+    // พื้นที่ว่างบนจอที่ไม่ถูกแถบปุ่มและแผงควบคุมบัง
+    function freeRect() {
+      let l = 6, t = 100, r = W - 6, b = H - 6;
+      const p = $('panel');
+      if (p && getComputedStyle(p).display !== 'none') {
+        const pr = p.getBoundingClientRect();
+        if (pr.height >= H * 0.85 && pr.left > W * 0.3) r = pr.left - 6; else b = Math.min(b, pr.top - 6);
+      }
+      if (b - t < 140) t = Math.max(44, b - 140);
+      return { l, t, r, b };
+    }
+    function corners(obj) {
       scene.updateMatrixWorld(true);
-      const box = new THREE.Box3();
-      obj.traverseVisible((o) => { if ((o.isMesh || o.isSprite) && o.geometry && !o.userData.noFit) { if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld)); } });
-      if (box.isEmpty()) box.set(new THREE.Vector3(-0.5, 0, -0.4), new THREE.Vector3(0.5, 0.5, 0.4));
-      const c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3());
-      const vf = camera.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * camera.aspect);
-      const dW = (Math.max(s.x, 0.5) * 0.5 + 0.05) / Math.tan(hf / 2);
-      const dH = (Math.max(s.y, s.z * 0.5, 0.3) * 0.5 + 0.05) / Math.tan(vf / 2) * 1.6;
-      const d = Math.max(dW, dH, 0.6) * 1.08;
-      const dir = new THREE.Vector3(0, 0.55, 1).normalize();
-      controls.target.copy(c); camera.position.copy(c).addScaledVector(dir, d); controls.update();
+      const pts = [], v = new THREE.Vector3();
+      obj.traverseVisible((o) => {
+        if (o.userData.noFit) return;
+        if (o.isSprite) {
+          o.getWorldPosition(v); const sx = Math.abs(o.scale.x) * 0.5 * 0.8, sy = Math.abs(o.scale.y) * 0.5;
+          for (const dx of [-sx, sx]) for (const dy of [-sy, sy]) pts.push(v.clone().add(new THREE.Vector3(dx, dy, 0)));
+        } else if (o.isMesh && o.geometry) {
+          if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+          const bb = o.geometry.boundingBox; if (bb.isEmpty()) return;
+          for (const x of [bb.min.x, bb.max.x]) for (const y of [bb.min.y, bb.max.y]) for (const z of [bb.min.z, bb.max.z]) pts.push(new THREE.Vector3(x, y, z).applyMatrix4(o.matrixWorld));
+        }
+      });
+      if (!pts.length) pts.push(new THREE.Vector3(-0.5, 0, -0.4), new THREE.Vector3(0.5, 0.5, 0.4));
+      return pts;
+    }
+    window.refit3D = () => { if (lastObj) requestAnimationFrame(() => fit(lastObj)); };
+    function fit(obj) {
+      lastObj = obj; touched = false;
+      const R = freeRect();
+      const pts = corners(obj);
+      const box = new THREE.Box3().setFromPoints(pts);
+      const tv = Math.tan(camera.fov * Math.PI / 360), th = tv * W / H;
+      const tx = th * (R.r - R.l) / W * 0.9, ty = tv * (R.b - R.t) / H * 0.9;
+      const solve = (dir) => {
+      const target = box.getCenter(new THREE.Vector3());
+      const fwd = dir.clone().negate(), right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0, 1, 0)).normalize();
+      const up = new THREE.Vector3().crossVectors(right, fwd);
+      const ext = (d) => {   // ขอบเขตภาพที่ระยะ d (หน่วย tan)
+        const cam = target.clone().addScaledVector(dir, d);
+        let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, ok = true;
+        for (const p of pts) {
+          const q = p.clone().sub(cam), z = q.dot(fwd);
+          if (z < 0.05) { ok = false; break; }
+          const x = q.dot(right) / z, y = q.dot(up) / z;
+          x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+        }
+        return { ok, x0, x1, y0, y1 };
+      };
+      let d = 1;
+      for (let it = 0; it < 3; it++) {
+        let lo = 0.3, hi = 12;
+        for (let k = 0; k < 30; k++) {
+          const m = (lo + hi) / 2, e = ext(m);
+          if (e.ok && (e.x1 - e.x0) <= 2 * tx && (e.y1 - e.y0) <= 2 * ty) hi = m; else lo = m;
+        }
+        d = hi;
+        const e = ext(d), mx = (e.x0 + e.x1) / 2, my = (e.y0 + e.y1) / 2;
+        target.addScaledVector(right, mx * d).addScaledVector(up, my * d);
+      }
+      return { d, target, dir };
+      };
+      // มองจากด้านหน้าเป็นหลัก ถ้าฉากยาวมากบนจอแนวตั้ง ให้มองเฉียงจะเห็นใหญ่กว่า
+      let best = solve(new THREE.Vector3(0, 0.6, 1).normalize());
+      const alt = solve(new THREE.Vector3(0.55, 0.65, 1).normalize());
+      if (alt.d < best.d * 0.8) best = alt;
+      const { d, target, dir } = best;
+      controls.target.copy(target); camera.position.copy(target).addScaledVector(dir, d);
+      controls.maxDistance = Math.max(7, d * 2.5);
+      lastKey = ''; controls.update();
     }
     function onResize() {
-      W = innerWidth; H = innerHeight; renderer.setSize(W, H); camera.aspect = W / H; camera.updateProjectionMatrix(); lastPh = -1;
+      W = innerWidth; H = innerHeight; renderer.setSize(W, H); camera.aspect = W / H; camera.updateProjectionMatrix(); lastKey = '';
     }
     window.addEventListener('resize', onResize);
     function frame() {
-      const p = $('panel');
-      const ph = p.style.display !== 'none' && getComputedStyle(p).display !== 'none' && !p.classList.contains('collapsed') ? p.offsetHeight : 0;
-      if (ph !== lastPh) { lastPh = ph; if (ph > 0) camera.setViewOffset(W, H, 0, Math.min(ph * 0.5, H * 0.3), W, H); else camera.clearViewOffset(); }
+      const R = freeRect(), key = [R.l, R.t, R.r, R.b, W, H].map(Math.round).join(',');
+      if (key !== lastKey) {
+        const first = lastKey === ''; lastKey = key;
+        camera.setViewOffset(W, H, W / 2 - (R.l + R.r) / 2, H / 2 - (R.t + R.b) / 2, W, H);
+        if (!first && lastObj && !touched) { clearTimeout(refitT); refitT = setTimeout(() => { if (!touched) fit(lastObj); }, 250); }
+      }
       controls.update();
     }
     const hint = $('hint3d'); hint.style.display = 'block'; hint.style.opacity = 1;
