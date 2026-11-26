@@ -151,9 +151,9 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
     padding: 8px 12px; text-decoration: none; cursor: pointer; }
   #liteRow { color: var(--muted); font-size: 14px; display: flex; gap: 8px; align-items: center; }
   #liteRow input { width: 20px; height: 20px; accent-color: #ffd91a; }
-  #tools { position: fixed; z-index: 21; left: 12px; top: calc(env(safe-area-inset-top, 0px) + 98px);
-    display: none; flex-direction: column; gap: 8px; }
-  #tools button { font: inherit; font-size: 15px; color: #fff; background: var(--panel); border: 2px solid rgba(255,217,26,0.6);
+  #tools { position: fixed; z-index: 21; left: 64px; top: calc(env(safe-area-inset-top, 0px) + 54px);
+    display: none; flex-direction: row; gap: 6px; }
+  #tools button { font: inherit; font-size: 14px; color: #fff; background: var(--panel); border: 2px solid rgba(255,217,26,0.6);
     border-radius: 999px; padding: 6px 12px; cursor: pointer; text-align: left; }
   #viewTabs { position: fixed; z-index: 22; top: calc(env(safe-area-inset-top, 0px) + 8px); left: 50%; transform: translateX(-50%);
     display: none; gap: 6px; background: var(--panel); border-radius: 999px; padding: 5px; max-width: calc(100% - 16px); overflow-x: auto; }
@@ -185,6 +185,22 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
   .why b { color: #ffd91a; }
   #toast { position: fixed; z-index: 45; left: 50%; bottom: 55vh; transform: translateX(-50%); background: rgba(15,22,40,0.95);
     border: 2px solid #ffd91a; border-radius: 12px; padding: 8px 14px; font-size: 15px; display: none; max-width: 90vw; text-align: center; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
+  .chips button { font: inherit; font-size: 14px; color: #fff; background: var(--tab-off); border: 0; border-radius: 999px;
+    padding: 6px 11px; cursor: pointer; }
+  .chips button.on { background: var(--tab-on); box-shadow: 0 0 0 2px #b3d9ff inset; }
+  #sceneA .tabs { flex-wrap: wrap; }
+  #sceneA .tabs button { flex: 1 1 22%; font-size: 15px; padding: 8px 6px; }
+  @media (orientation: landscape) and (min-aspect-ratio: 5/4) {
+    #panel { left: auto; right: 0; transform: none; top: 0; bottom: 0; width: min(46vw, 440px); max-height: none;
+      border-radius: 18px 0 0 18px; padding-bottom: 0; }
+    #panel .body { padding-bottom: env(safe-area-inset-bottom, 8px); }
+    #slowBtn { right: calc(min(46vw, 440px) + 12px); }
+    #viewTabs, #chip { left: calc((100% - min(46vw, 440px)) / 2); max-width: calc(100% - min(46vw, 440px) - 16px); }
+    #toast { left: calc((100% - min(46vw, 440px)) / 2); bottom: 20vh; }
+    #hint3d { left: calc((100% - min(46vw, 440px)) / 2); }
+    #viewTabs { transform: translateX(-50%); }
+  }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
   .ar3 { display: block; max-width: 26em; text-decoration: none; color: #fff; background: rgba(255,217,26,0.12); border: 2px solid #ffd91a; border-radius: 14px; padding: 10px 14px; }
@@ -261,6 +277,10 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
         <button data-mode="partial">เด้งบางส่วน (ไม่ยืดหยุ่น)</button>
         <button data-mode="stick">ติดกันไป</button>
       </div>
+      <label class="sl">สถานการณ์ตัวอย่าง (กดแล้วทายผลก่อนกด “เริ่มชน!”)</label>
+      <div class="chips" id="c1Real"></div>
+      <div class="info" id="c1Pred" style="display:none"></div>
+      <div id="eRow" style="display:none"><label class="sl" id="eLab"></label><input type="range" id="eS" min="0.1" max="0.9" step="0.1" value="0.5"></div>
       <label class="sl" id="m1Lab"></label><input type="range" id="m1" min="0.05" max="0.3" step="0.05" value="0.1">
       <label class="sl" id="u1Lab"></label><input type="range" id="u1" min="0" max="2" step="0.25" value="1">
       <label class="sl" id="m2Lab"></label><input type="range" id="m2" min="0.05" max="0.3" step="0.05" value="0.1">
@@ -280,6 +300,9 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
     <!-- AR 2 Explosion Lab -->
     <div class="scene" id="s2">
       <div class="sub2"><button id="e2Preset">ภารกิจย่อย ง (0.2 kg กับ 0.1 kg)</button></div>
+      <label class="sl">ตัวอย่างในชีวิตจริง (อัตราส่วนมวล)</label>
+      <div class="chips" id="e2Real"></div>
+      <div class="info" id="e2Pred" style="display:none"></div>
       <label class="sl" id="em1Lab"></label><input type="range" id="em1" min="0.05" max="0.3" step="0.05" value="0.2">
       <label class="sl" id="em2Lab"></label><input type="range" id="em2" min="0.05" max="0.3" step="0.05" value="0.1">
       <label class="sl" id="eELab"></label><input type="range" id="eE" min="0.01" max="0.05" step="0.01" value="0.03">
@@ -351,7 +374,9 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
         <button data-mode="stick">ติดดินน้ำมัน (ติดกันไป)</button>
       </div>
       <label class="sl">ดึงลูกตุ้มกี่ลูก</label>
-      <div class="row" id="ncN"><button class="btn on" data-n="1">1 ลูก</button><button class="btn" data-n="2">2 ลูก</button><button class="btn" data-n="3">3 ลูก</button></div>
+      <div class="row" id="ncN"><button class="btn on" data-n="1">1 ลูก</button><button class="btn" data-n="2">2 ลูก</button><button class="btn" data-n="3">3 ลูก</button><button class="btn" data-n="4">4 ลูก</button></div>
+      <label class="sl">มุมที่ดึง (ดึงสูง = เร็วขึ้นตอนชน)</label>
+      <div class="chips" id="ncAng"><button data-a="20">20°</button><button data-a="35" class="on">35°</button><button data-a="50">50°</button></div>
       <div class="row"><button class="btn go" id="ncGo">ปล่อย!</button><button class="btn" id="ncStop" style="flex:0.5">เริ่มใหม่</button></div>
       <div class="info" id="ncInfo"></div>
       <div class="muted" style="font-size:14px">ทำนายก่อนปล่อย: ดึง 2 ลูก อีกฝั่งจะกระเด็นออกกี่ลูก? แล้วลองเปลี่ยนเป็นแบบติดดินน้ำมัน กด 📘 และ 💡 เพื่อดูเหตุผล</div>
@@ -393,12 +418,14 @@ function makeArrow(color) {
   return g;
 }
 
+const LBL_SCALE = 1.15;   // ขยายป้ายตัวเลขให้อ่านง่ายบนจอโทรศัพท์
 function makeLabel(color = '#ffffff', width = 0.55) {
   const c = document.createElement('canvas');
   c.width = 1024; c.height = 128;
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+  width *= LBL_SCALE;
   s.scale.set(width, width / 8, 1);
   s.renderOrder = 10;
   s.visible = false;
@@ -411,12 +438,14 @@ function makeLabel(color = '#ffffff', width = 0.55) {
     g.clearRect(0, 0, 1024, 128);
     if (!t) { s.visible = false; return; }
     s.visible = true;
-    g.font = '600 64px Sarabun, sans-serif';
-    const tw = Math.min(1010, g.measureText(t).width + 56);
-    g.fillStyle = 'rgba(15,22,40,0.85)';
-    g.beginPath(); g.roundRect((1024 - tw) / 2, 12, tw, 104, 30); g.fill();
+    let fs = 80; g.font = `600 ${fs}px Sarabun, sans-serif`;
+    const w0 = g.measureText(t).width;
+    if (w0 > 960) { fs = Math.max(40, Math.floor(fs * 960 / w0)); g.font = `600 ${fs}px Sarabun, sans-serif`; }
+    const tw = Math.min(1016, g.measureText(t).width + 48);
+    g.fillStyle = 'rgba(15,22,40,0.88)';
+    g.beginPath(); g.roundRect((1024 - tw) / 2, 6, tw, 116, 34); g.fill();
     g.fillStyle = col || color; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText(t, 512, 66);
+    g.fillText(t, 512, 68);
     tex.needsUpdate = true;
   };
   return s;
@@ -693,11 +722,35 @@ function buildAR1(root) {
   for (const id of ['m1', 'u1', 'm2', 'u2']) $(id).oninput = (e) => { if (S.phase === 'run') { e.target.value = S[id]; return; } S[id] = +e.target.value; clearPreset(); reset(); };
   document.querySelectorAll('#c1Preset button').forEach((b) => b.onclick = () => {
     if (S.phase === 'run') return;
-    Object.assign(S, { m1: 0.1, u1: 1, m2: 0.1, u2: 0 });
+    Object.assign(S, { m1: 0.1, u1: 1, m2: 0.1, u2: 0 }); E.partial = 0.5; $('eS').value = 0.5;
+    $('c1Real').querySelectorAll('button').forEach((x) => x.classList.remove('on')); $('c1Pred').style.display = 'none'; preAns = null;
     for (const id of ['m1', 'u1', 'm2', 'u2']) $(id).value = S[id];
     setMode({ ก: 'elastic', ข: 'stick', ค: 'partial' }[b.dataset.p]);
     document.querySelectorAll('#c1Preset button').forEach((x) => x.classList.toggle('on', x === b));
     S.preset = b.dataset.p; reset(); go(false);
+  });
+  $('eS').oninput = (e) => { if (S.phase === 'run') { e.target.value = E.partial; return; } E.partial = +e.target.value; clearPreset(); reset(); };
+  const REAL = [
+    { n: 'มวลเท่ากัน เด้ง', mode: 'elastic', m1: 0.1, u1: 1, m2: 0.1, u2: 0, q: 'ทายก่อน: หลังชนรถสีฟ้าจะเป็นอย่างไร?', a: 'มวลเท่ากันชนแบบยืดหยุ่น ความเร็วสลับกัน สีฟ้าหยุดนิ่ง สีส้มวิ่งออกด้วยความเร็วเดิม ΣEk เท่าเดิม' },
+    { n: 'ลูกเบาชนลูกหนัก', mode: 'elastic', m1: 0.05, u1: 1.5, m2: 0.3, u2: 0, q: 'ทายก่อน: รถเบา (0.05 kg) ชนรถหนัก (0.3 kg) จะเด้งกลับไหม?', a: 'รถเบาเด้งกลับ (v₁ ติดลบ) รถหนักเคลื่อนที่ช้า ๆ Σp และ ΣEk เท่าเดิม' },
+    { n: 'ลูกหนักชนลูกเบา', mode: 'elastic', m1: 0.3, u1: 1, m2: 0.05, u2: 0, q: 'ทายก่อน: รถเบาที่ถูกชนจะเร็วกว่ารถหนักตอนแรกหรือไม่?', a: 'รถเบาพุ่งออกเร็วเกือบ 2 เท่าของ u₁ ส่วนรถหนักแทบไม่ช้าลง' },
+    { n: 'สวนกันแล้วติดกัน', mode: 'stick', m1: 0.1, u1: 1, m2: 0.1, u2: -1, q: 'ทายก่อน: Σp ก่อนชนเท่าไร หลังติดกันจะเป็นอย่างไร?', a: 'Σp ≈ 0 หลังติดกันจึงแทบหยุดนิ่ง ΣEk แทบหายหมด กลายเป็นความร้อนและเสียง' },
+    { n: 'ชนท้ายแล้วติดกัน', mode: 'stick', m1: 0.2, u1: 1.5, m2: 0.1, u2: 0.5, q: 'ทายก่อน: หลังติดกันจะเร็วเท่าไร?', a: 'v = Σp ÷ Σm = (0.2×1.5 + 0.1×0.5) ÷ 0.3 ≈ 1.17 m/s ΣEk ลดลงบางส่วน' },
+    { n: 'กันชนฟองน้ำ', mode: 'partial', m1: 0.15, u1: 1.5, m2: 0.15, u2: 0, e: 0.5, q: 'ทายก่อน: เด้งบางส่วน ΣEk หายไปประมาณกี่เปอร์เซ็นต์?', a: 'Σp เท่าเดิม แต่ ΣEk หายไปบางส่วน ลองเลื่อน “ความเด้ง” แล้วดูว่า % ที่หายไปเปลี่ยนอย่างไร' },
+  ];
+  $('c1Real').innerHTML = REAL.map((p, i) => `<button data-i="${i}">${p.n}</button>`).join('');
+  let preAns = null;
+  $('c1Real').querySelectorAll('button').forEach((b) => b.onclick = () => {
+    if (S.phase === 'run') return;
+    const p = REAL[+b.dataset.i];
+    clearPreset();
+    Object.assign(S, { m1: p.m1, u1: p.u1, m2: p.m2, u2: p.u2 });
+    for (const id of ['m1', 'u1', 'm2', 'u2']) $(id).value = S[id];
+    if (p.e) { E.partial = p.e; $('eS').value = p.e; }
+    setMode(p.mode);
+    $('c1Real').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+    preAns = p.a; $('c1Pred').style.display = ''; $('c1Pred').innerHTML = `🤔 ${p.q}`;
+    reset();
   });
   $('c1Go').onclick = () => go(false);
   $('c1Slow').onclick = () => go(true);
@@ -710,6 +763,8 @@ function buildAR1(root) {
     const sc = (m) => 0.7 + (m - 0.05) * 2.4;   // รถหนักแสดงใหญ่ขึ้น
     c1.scale.setScalar(sc(S.m1)); c2.scale.setScalar(sc(S.m2));
     $('m1Lab').textContent = `รถคันที่ 1 (สีฟ้า)  m₁ = ${S.m1.toFixed(2)} kg`;
+    $('eRow').style.display = S.mode === 'partial' ? '' : 'none';
+    $('eLab').textContent = `ความเด้งของกันชน e = ${E.partial.toFixed(1)}  (1 = เด้งเต็มที่ · 0 = ติดกัน)`;
     $('u1Lab').textContent = `ความเร็วก่อนชน  u₁ = ${sgn(S.u1)} m/s`;
     $('m2Lab').textContent = `รถคันที่ 2 (สีส้ม)  m₂ = ${S.m2.toFixed(2)} kg`;
     $('u2Lab').textContent = `ความเร็วก่อนชน  u₂ = ${sgn(S.u2)} m/s  (ค่าลบ = วิ่งไปทางซ้าย)`;
@@ -767,8 +822,9 @@ function buildAR1(root) {
     Sound.thud(S.mode === 'elastic');
     if (S.mode === 'elastic') Sound.tone(900, 0.15, 'sine', 0.15);
     info(); drawBars();
+    if (preAns) { $('c1Pred').innerHTML += `<br><span class="good">เฉลย: ${preAns}</span>`; preAns = null; }
     $('c1Msg').innerHTML = '<span class="good">Σp ก่อนชน = Σp หลังชน (โมเมนตัมอนุรักษ์ทุกแบบ)</span>' + (S.mode === 'elastic' ? '<span class="good"> และ ΣEk คงตัว</span>' : '<span class="orange"> แต่ ΣEk ลดลง</span>');
-    const key = S.preset ? 'P' + S.preset : [S.mode, S.m1, S.u1, S.m2, S.u2].join('|'), n = S.cnt.next(key);
+    const key = S.preset ? 'P' + S.preset : [S.mode, S.m1, S.u1, S.m2, S.u2, S.mode === 'partial' ? E.partial : ''].join('|'), n = S.cnt.next(key);
     S.rows.push({ key, n, p: S.preset || '', label: [S.preset || '', NAME[S.mode]], v: [m1, S.ua1, m2, S.ua2, pB(), kB(), v1, v2, m1 * v1 + m2 * v2, ek(m1, v1) + ek(m2, v2)] });
     if (S.rows.length > 12) S.rows.shift();
     if (n < 3) $('c1Msg').innerHTML += `<br><span style="color:#ffd91a">บันทึกครั้งที่ ${n} จาก 3 แล้ว ทำซ้ำค่าเดิมอีก ${3 - n} ครั้ง ระบบจะหาค่าเฉลี่ยให้</span>`;
@@ -877,7 +933,21 @@ function buildAR2(root) {
   const graph = new Graph($('e2Graph'), { tMax: 2, tStep: 0.5, tFmt: (t) => t.toFixed(1), pMin: -0.15, pMax: 0.15, pStep: 0.05, fmt: (p) => p.toFixed(2), yLabel: 'p (kg·m/s)', maxSeries: 3 });
 
   for (const [id, key] of [['em1', 'm1'], ['em2', 'm2'], ['eE', 'E']]) $(id).oninput = (e) => { if (S.phase === 'run') { e.target.value = S[key]; return; } S[key] = +e.target.value; reset(); };
-  $('e2Preset').onclick = () => { if (S.phase === 'run') return; S.m1 = 0.2; S.m2 = 0.1; $('em1').value = 0.2; $('em2').value = 0.1; reset(); go(); };
+  $('e2Preset').onclick = () => { if (S.phase === 'run') return; S.m1 = 0.2; S.m2 = 0.1; $('em1').value = 0.2; $('em2').value = 0.1; $('e2Pred').style.display = 'none'; reset(); go(); };
+  const REAL2 = [
+    { n: 'สองคนบนสเก็ตบอร์ดผลักกัน (1 : 1)', m1: 0.15, m2: 0.15, a: 'มวลเท่ากัน ออกตัวเร็วเท่ากันแต่ทิศตรงข้าม' },
+    { n: 'พ่อกับลูกบนลานน้ำแข็ง (2 : 1)', m1: 0.2, m2: 0.1, a: 'คนหนักกว่า 2 เท่า เคลื่อนที่ช้ากว่า 2 เท่า' },
+    { n: 'คนกระโดดจากเรือ (1 : 3)', m1: 0.1, m2: 0.3, a: 'เรือหนักกว่า 3 เท่า ถอยหลังช้ากว่าคน 3 เท่า' },
+    { n: 'ปืนใหญ่ยิงลูกกระสุน (6 : 1)', m1: 0.3, m2: 0.05, a: 'ลูกกระสุนเบาพุ่งเร็วกว่าตัวปืน 6 เท่า ปืนถอยหลังช้า ๆ (แรงถีบ)' },
+  ];
+  $('e2Real').innerHTML = REAL2.map((p, i) => `<button data-i="${i}">${p.n}</button>`).join('');
+  $('e2Real').querySelectorAll('button').forEach((b) => b.onclick = () => {
+    if (S.phase === 'run') return;
+    const p = REAL2[+b.dataset.i]; S.m1 = p.m1; S.m2 = p.m2; $('em1').value = p.m1; $('em2').value = p.m2;
+    $('e2Real').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+    $('e2Pred').style.display = ''; $('e2Pred').innerHTML = `🤔 ทายก่อน: ใครออกตัวเร็วกว่า และเร็วกว่ากี่เท่า?<br><span class="muted">กด “ปล่อยสปริง!” แล้วดูเฉลย</span>`; $('e2Pred').dataset.a = p.a;
+    reset();
+  });
   $('e2Go').onclick = go;
   $('e2Clr').onclick = () => { if (S.phase === 'run') return; S.rows = []; S.cnt.clear(); refreshTable(); graph.clear(); reset(); };
 
@@ -917,6 +987,7 @@ function buildAR2(root) {
     const p = pOut(); S.v1 = -p / S.m1; S.v2 = p / S.m2; S.done = true;
     sparks.burst(0, 0.07, 0.3, 0.4); Sound.tone(300, 0.25, 'square', 0.15, 0, 1200); lPop.setText('ตัดด้าย! ปึ้ง!'); S.pop = 0.8;
     info();
+    if ($('e2Pred').style.display !== 'none' && $('e2Pred').dataset.a) { $('e2Pred').innerHTML = `🤔 ใครออกตัวเร็วกว่า? <span class="good">เฉลย: ${$('e2Pred').dataset.a}</span>`; }
     $('e2Msg').textContent = 'ลูกศรโมเมนตัมยาวเท่ากันแต่ทิศตรงข้าม แถบโมเมนตัมรวมอยู่ที่ศูนย์ตลอด ดูภาพแฟลชบนราง (ทุก 0.2 s): เงาของคันเบาห่างกันมากกว่า แปลว่าเร็วกว่า';
     const key = [S.m1, S.m2, S.E].join('|'), n = S.cnt.next(key);
     S.rows.push({ key, n, v: [S.m1, S.m2, S.v1, S.v2, S.m1 * S.v1, S.m2 * S.v2, S.m1 * S.v1 + S.m2 * S.v2, ek(S.m1, S.v1) + ek(S.m2, S.v2)] });
@@ -991,6 +1062,26 @@ function buildAR3(root) {
       e: 'm_A v_A = m_B v_B  →  v_A = v_B / 3 รถ A ช้ากว่า 3 เท่า ในเวลาเท่ากันจึงไปได้ 60 / 3 = 20 cm' },
   ];
   const CODES = ['CAR-0QX', 'CAR-1LM', 'CAR-2PT', 'CAR-3RB', 'CAR-4ZK', 'CAR-5WN'];
+  // คลังข้อฝึกเพิ่ม (โหมดฝึก ไม่นับเหรียญ)
+  const EXTRA = [
+    { q: 'การชนแบบไม่ยืดหยุ่น ข้อใดถูกต้อง', c: ['Σp คงตัว แต่ ΣEk ลดลง', 'Σp ลดลง แต่ ΣEk คงตัว', 'ทั้ง Σp และ ΣEk ลดลง', 'ทั้ง Σp และ ΣEk คงตัว'], a: 0, e: 'การชนทุกแบบ Σp คงตัว (ไม่มีแรงภายนอกลัพธ์) แต่การชนแบบไม่ยืดหยุ่น ΣEk ลดลง' },
+    { q: 'รถมวลเท่ากันชนแบบยืดหยุ่น โดยคันหลังวิ่ง 1 m/s ชนคันหน้าที่จอดนิ่ง หลังชนเป็นอย่างไร', c: ['ทั้งสองวิ่งไปด้วย 0.5 m/s', 'คันหลังหยุด คันหน้าวิ่ง 1 m/s', 'คันหลังเด้งกลับ 1 m/s', 'ทั้งสองหยุดนิ่ง'], a: 1, e: 'มวลเท่ากันชนแบบยืดหยุ่น ความเร็วสลับกัน (เหมือนลูกตุ้มนิวตัน)' },
+    { q: 'รถ 0.1 kg วิ่ง 1 m/s ชนรถ 0.1 kg ที่วิ่งสวนมา 1 m/s แล้วติดกัน ความเร็วหลังชนเท่าใด', c: ['0 m/s', '0.5 m/s', '1 m/s', '2 m/s'], a: 0, e: 'Σp ก่อน = (0.1)(1) + (0.1)(−1) = 0 หลังติดกันจึงหยุดนิ่ง' },
+    { q: 'รถ 0.2 kg วิ่ง 1 m/s ชนรถ 0.2 kg ที่จอดนิ่งแล้วติดกัน พลังงานจลน์หายไปกี่เปอร์เซ็นต์', c: ['0%', '25%', '50%', '100%'], a: 2, e: 'v หลัง = 0.5 m/s Ek ก่อน = ½(0.2)(1)² = 0.1 J Ek หลัง = ½(0.4)(0.5)² = 0.05 J หายไป 50%' },
+    { q: 'ลูกตุ้มนิวตัน ดึง 2 ลูกปล่อยชน อีกฝั่งกระเด็นออกกี่ลูก', c: ['1 ลูก เร็วเป็น 2 เท่า', '2 ลูก ความเร็วเท่าเดิม', '3 ลูก', 'ไม่มีลูกใดกระเด็น'], a: 1, e: 'ต้องอนุรักษ์ทั้ง Σp และ ΣEk พร้อมกัน จึงต้องออก 2 ลูกด้วยความเร็วเดิม' },
+    { q: 'ปืนมวล 3 kg ยิงกระสุนมวล 0.01 kg ออกไปด้วยความเร็ว 300 m/s ปืนถอยหลังด้วยความเร็วเท่าใด', c: ['0.1 m/s', '1 m/s', '3 m/s', '10 m/s'], a: 1, e: '0 = (0.01)(300) + (3)v → v = −1 m/s ปืนถอยหลัง 1 m/s' },
+    { q: 'การดีดตัวแยกจากกันของวัตถุสองก้อนที่อยู่นิ่ง ข้อใดถูกต้อง', c: ['Σp หลังแยก = 0 และ ΣEk เพิ่มขึ้น', 'Σp หลังแยกมากกว่า 0', 'ΣEk หลังแยก = 0', 'วัตถุทั้งสองเคลื่อนที่ทิศเดียวกัน'], a: 0, e: 'Σp ก่อน = 0 จึงยังเป็น 0 แต่พลังงานศักย์ในสปริงเปลี่ยนเป็นพลังงานจลน์ ΣEk จึงเพิ่มขึ้น' },
+    { q: 'ในการดีดตัวแยก วัตถุที่มีมวลมากกว่าจะเป็นอย่างไร', c: ['เคลื่อนที่เร็วกว่า', 'เคลื่อนที่ช้ากว่า', 'มีโมเมนตัมมากกว่า', 'อยู่นิ่ง'], a: 1, e: 'ขนาดโมเมนตัมเท่ากัน m₁v₁ = m₂v₂ มวลมากกว่าจึงเคลื่อนที่ช้ากว่า' },
+    { q: 'พลังงานจลน์ที่หายไปในการชนแบบไม่ยืดหยุ่น เปลี่ยนเป็นพลังงานรูปใด', c: ['โมเมนตัม', 'ความร้อน เสียง และการเปลี่ยนรูปร่าง', 'มวลของวัตถุ', 'หายไปจากจักรวาล'], a: 1, e: 'พลังงานไม่สูญหาย แต่เปลี่ยนเป็นความร้อน เสียง และงานที่ทำให้วัตถุเปลี่ยนรูป' },
+    { q: 'รถ 0.3 kg วิ่ง 1 m/s ชนรถ 0.1 kg ที่จอดนิ่งแล้วติดกัน ความเร็วหลังชนเท่าใด', c: ['0.25 m/s', '0.5 m/s', '0.75 m/s', '1 m/s'], a: 2, e: '(0.3)(1) = (0.4)v → v = 0.75 m/s' },
+  ];
+  const Q_MAIN = Q.slice(); let practice = false;
+  function startPractice() {
+    const pool = Q_MAIN.concat(EXTRA).slice();
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    Q.length = 0; pool.slice(0, 5).forEach((x, k) => Q.push({ ...x, q: `${k + 1}. ` + x.q.replace(/^\d+\.\s*/, '') }));
+    practice = true; idx = 0; score = 0; answered = false; render();
+  }
   const L = ['ก.', 'ข.', 'ค.', 'ง.'];
   let idx = 0, score = 0, answered = false, t = 0;
 
@@ -1017,23 +1108,34 @@ function buildAR3(root) {
   const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.012, 28), mat(0xffd700, { metalness: 0.8, roughness: 0.2 }));
   coin.rotation.x = Math.PI / 2; coin.visible = false; root.add(coin);
   let coinT = 0;
-  const setCoins = () => { shared.coins = score * 2; coinLab.setText(`เหรียญที่ได้ ${score * 2} บาท`); shared.onCoins && shared.onCoins(); };
+  let mainScore = 0;
+  const setCoins = () => { if (practice) { coinLab.setText(`โหมดฝึกเพิ่ม · ถูก ${score} ข้อ`); return; } mainScore = score; shared.coins = score * 2; coinLab.setText(`เหรียญที่ได้ ${score * 2} บาท`); shared.onCoins && shared.onCoins(); };
 
   function render() {
-    props.forEach((p, i) => p.visible = i === idx);
+    props.forEach((p, i) => p.visible = !practice && i === idx);
     setCoins();
     const body = $('qBody');
+    if (idx >= Q.length && practice) {
+      $('qHead').textContent = 'จบชุดฝึกเพิ่ม';
+      body.innerHTML = `<div class="score">${score} / ${Q.length} ข้อ</div><div class="info muted" style="text-align:center">โหมดฝึกไม่นับเหรียญ (เหรียญจากด่านหลักยังอยู่ ${mainScore * 2} บาท)</div>
+        <div class="row"><button class="btn" id="qPrac" style="background:#7c3aed">🎲 สุ่มชุดใหม่</button></div>`;
+      $('qPrac').onclick = startPractice;
+      if (score >= 4) { Sound.fanfare(); confetti(); }
+      return;
+    }
     if (idx >= Q.length) {
       $('qHead').textContent = 'จบด่านข้อสอบ';
       body.innerHTML = `<div class="score">${score} / ${Q.length} ข้อ</div>
         <div class="msg" style="text-align:center">ได้เหรียญซื้อวัสดุเสริม <span style="color:#ffd91a">${score * 2} บาท</span></div>
         <div class="score" style="font-size:34px;letter-spacing:3px;color:#ffd91a">${CODES[score]}</div>
-        <div class="info muted" style="text-align:center">นำรหัสนี้ไปแสดงครูเพื่อรับเหรียญ และบันทึกคะแนนข้อสอบ AR ลงใบกิจกรรมที่ 3<br>งบนี้จะขึ้นในหน้า AR 5 → คิดต้นทุน อัตโนมัติ</div>`;
+        <div class="info muted" style="text-align:center">นำรหัสนี้ไปแสดงครูเพื่อรับเหรียญ และบันทึกคะแนนข้อสอบ AR ลงใบกิจกรรมที่ 3<br>งบนี้จะขึ้นในหน้า AR 5 → คิดต้นทุน อัตโนมัติ</div>
+        <div class="row"><button class="btn" id="qPrac" style="background:#7c3aed">🎲 ฝึกเพิ่ม (สุ่มจากคลัง 15 ข้อ ไม่นับเหรียญ)</button></div>`;
+      $('qPrac').onclick = startPractice;
       if (score >= 4) { Sound.fanfare(); confetti(); }
       return;
     }
     const q = Q[idx];
-    $('qHead').textContent = `ด่านข้อสอบ  ข้อ ${idx + 1} / ${Q.length}   เหรียญ ${score * 2} บาท   (ตอบได้ข้อละ 1 ครั้ง ถูกได้ 2 บาท)`;
+    $('qHead').textContent = practice ? `ชุดฝึกเพิ่ม (ไม่นับเหรียญ)  ข้อ ${idx + 1} / ${Q.length}   ถูก ${score} ข้อ` : `ด่านข้อสอบ  ข้อ ${idx + 1} / ${Q.length}   เหรียญ ${score * 2} บาท   (ตอบได้ข้อละ 1 ครั้ง ถูกได้ 2 บาท)`;
     body.innerHTML = `<div class="q">${q.q}</div>` + q.c.map((c, i) => `<button class="choice" data-i="${i}">${L[i]} ${c}</button>`).join('') +
       `<div class="info" id="qFeed"></div><div class="row"><button class="btn on" id="qNext" style="display:none">${idx === Q.length - 1 ? 'ดูผลและรหัส' : 'ข้อต่อไป'}</button></div>`;
     body.querySelectorAll('.choice').forEach((b) => b.onclick = () => answer(+b.dataset.i));
@@ -1045,8 +1147,8 @@ function buildAR3(root) {
     const q = Q[idx], ok = i === q.a;
     if (ok) { score++; Sound.ding(); coin.visible = true; coinT = 0; } else Sound.buzz();
     $('qBody').querySelectorAll('.choice').forEach((b) => { const k = +b.dataset.i; if (k === q.a) b.classList.add('right'); else if (k === i) b.classList.add('wrong'); b.disabled = true; });
-    $('qFeed').innerHTML = (ok ? '<span class="good"><b>ถูกต้อง! +2 บาท</b></span> ' : '<span class="bad"><b>เฉลย</b></span> ') + q.e;
-    $('qHead').textContent = `ด่านข้อสอบ  ข้อ ${idx + 1} / ${Q.length}   เหรียญ ${score * 2} บาท`;
+    $('qFeed').innerHTML = (ok ? `<span class="good"><b>ถูกต้อง!${practice ? '' : ' +2 บาท'}</b></span> ` : '<span class="bad"><b>เฉลย</b></span> ') + q.e;
+    $('qHead').textContent = practice ? `ชุดฝึกเพิ่ม  ข้อ ${idx + 1} / ${Q.length}   ถูก ${score} ข้อ` : `ด่านข้อสอบ  ข้อ ${idx + 1} / ${Q.length}   เหรียญ ${score * 2} บาท`;
     setCoins();
     $('qNext').style.display = '';
   }
@@ -1383,7 +1485,8 @@ function buildAR6(root) {
   $('ncGo').onclick = release;
   $('ncStop').onclick = reset;
 
-  const TH0 = 0.62;   // มุมดึงเริ่มต้น (rad) ประมาณ 35°
+  let TH0 = 0.62;   // มุมดึงเริ่มต้น (rad) ประมาณ 35°
+  document.querySelectorAll('#ncAng button').forEach((b) => b.onclick = () => { TH0 = +b.dataset.a * Math.PI / 180; document.querySelectorAll('#ncAng button').forEach((x) => x.classList.toggle('on', x === b)); reset(); });
   const vOf = (w) => Math.abs(w) * LP;
   function refresh() {
     document.querySelectorAll('#ncN button').forEach((b) => b.classList.toggle('on', +b.dataset.n === S.n));
@@ -1442,7 +1545,7 @@ function buildAR6(root) {
     }
     const v = v0();
     lP.position.set(0, TOP + 0.2, -0.05); lP.setText(`Σp ก่อนชน = Σp หลังชน = ${(n * MB * v).toFixed(3)} kg·m/s`);
-    lE.position.set(0, TOP + 0.27, -0.05);
+    lE.position.set(0, TOP + 0.33, -0.05);
     lE.setText(S.last === 'stick' ? `ΣEk ลดจาก ${(0.5 * n * MB * v * v).toFixed(3)} เหลือ ${(0.5 * n * MB * v * v * n / NB).toFixed(3)} J` : `ΣEk = ${(0.5 * n * MB * v * v).toFixed(3)} J (เท่าเดิม)`);
     if (hitT > 0) { hitT -= dt; lHit.position.set(0, 0.06, 0.18); lHit.setText(S.mode === 'stick' ? 'ปึก! ติดกัน' : 'แกร๊ก!'); } else lHit.setText('');
   }
@@ -1698,28 +1801,92 @@ const KIT = (() => {
       if (paper) { const p = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.72), new THREE.MeshStandardMaterial({ color: 0xf3efe4, roughness: 1 })); p.position.z = -0.002; g.add(p); }
       return g;
     }
-    let lastPh = -1, W = innerWidth, H = innerHeight;
-    function fit(obj) {
+    let W = innerWidth, H = innerHeight, lastKey = '', lastObj = null, touched = false, refitT = 0;
+    renderer.domElement.addEventListener('pointerdown', () => { touched = true; });
+    // พื้นที่ว่างบนจอที่ไม่ถูกแถบปุ่มและแผงควบคุมบัง
+    function freeRect() {
+      let l = 6, t = 100, r = W - 6, b = H - 6;
+      const p = $('panel');
+      if (p && getComputedStyle(p).display !== 'none') {
+        const pr = p.getBoundingClientRect();
+        if (pr.height >= H * 0.85 && pr.left > W * 0.3) r = pr.left - 6; else b = Math.min(b, pr.top - 6);
+      }
+      if (b - t < 140) t = Math.max(44, b - 140);
+      return { l, t, r, b };
+    }
+    function corners(obj) {
       scene.updateMatrixWorld(true);
-      const box = new THREE.Box3();
-      obj.traverseVisible((o) => { if ((o.isMesh || o.isSprite) && o.geometry && !o.userData.noFit) { if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld)); } });
-      if (box.isEmpty()) box.set(new THREE.Vector3(-0.5, 0, -0.4), new THREE.Vector3(0.5, 0.5, 0.4));
-      const c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3());
-      const vf = camera.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * camera.aspect);
-      const dW = (Math.max(s.x, 0.5) * 0.5 + 0.05) / Math.tan(hf / 2);
-      const dH = (Math.max(s.y, s.z * 0.5, 0.3) * 0.5 + 0.05) / Math.tan(vf / 2) * 1.6;
-      const d = Math.max(dW, dH, 0.6) * 1.08;
-      const dir = new THREE.Vector3(0, 0.55, 1).normalize();
-      controls.target.copy(c); camera.position.copy(c).addScaledVector(dir, d); controls.update();
+      const pts = [], v = new THREE.Vector3();
+      obj.traverseVisible((o) => {
+        if (o.userData.noFit) return;
+        if (o.isSprite) {
+          o.getWorldPosition(v); const sx = Math.abs(o.scale.x) * 0.5 * 0.8, sy = Math.abs(o.scale.y) * 0.5;
+          for (const dx of [-sx, sx]) for (const dy of [-sy, sy]) pts.push(v.clone().add(new THREE.Vector3(dx, dy, 0)));
+        } else if (o.isMesh && o.geometry) {
+          if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+          const bb = o.geometry.boundingBox; if (bb.isEmpty()) return;
+          for (const x of [bb.min.x, bb.max.x]) for (const y of [bb.min.y, bb.max.y]) for (const z of [bb.min.z, bb.max.z]) pts.push(new THREE.Vector3(x, y, z).applyMatrix4(o.matrixWorld));
+        }
+      });
+      if (!pts.length) pts.push(new THREE.Vector3(-0.5, 0, -0.4), new THREE.Vector3(0.5, 0.5, 0.4));
+      return pts;
+    }
+    window.refit3D = () => { if (lastObj) requestAnimationFrame(() => fit(lastObj)); };
+    function fit(obj) {
+      lastObj = obj; touched = false;
+      const R = freeRect();
+      const pts = corners(obj);
+      const box = new THREE.Box3().setFromPoints(pts);
+      const tv = Math.tan(camera.fov * Math.PI / 360), th = tv * W / H;
+      const tx = th * (R.r - R.l) / W * 0.9, ty = tv * (R.b - R.t) / H * 0.9;
+      const solve = (dir) => {
+      const target = box.getCenter(new THREE.Vector3());
+      const fwd = dir.clone().negate(), right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0, 1, 0)).normalize();
+      const up = new THREE.Vector3().crossVectors(right, fwd);
+      const ext = (d) => {   // ขอบเขตภาพที่ระยะ d (หน่วย tan)
+        const cam = target.clone().addScaledVector(dir, d);
+        let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, ok = true;
+        for (const p of pts) {
+          const q = p.clone().sub(cam), z = q.dot(fwd);
+          if (z < 0.05) { ok = false; break; }
+          const x = q.dot(right) / z, y = q.dot(up) / z;
+          x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+        }
+        return { ok, x0, x1, y0, y1 };
+      };
+      let d = 1;
+      for (let it = 0; it < 3; it++) {
+        let lo = 0.3, hi = 12;
+        for (let k = 0; k < 30; k++) {
+          const m = (lo + hi) / 2, e = ext(m);
+          if (e.ok && (e.x1 - e.x0) <= 2 * tx && (e.y1 - e.y0) <= 2 * ty) hi = m; else lo = m;
+        }
+        d = hi;
+        const e = ext(d), mx = (e.x0 + e.x1) / 2, my = (e.y0 + e.y1) / 2;
+        target.addScaledVector(right, mx * d).addScaledVector(up, my * d);
+      }
+      return { d, target, dir };
+      };
+      // มองจากด้านหน้าเป็นหลัก ถ้าฉากยาวมากบนจอแนวตั้ง ให้มองเฉียงจะเห็นใหญ่กว่า
+      let best = solve(new THREE.Vector3(0, 0.6, 1).normalize());
+      const alt = solve(new THREE.Vector3(0.55, 0.65, 1).normalize());
+      if (alt.d < best.d * 0.8) best = alt;
+      const { d, target, dir } = best;
+      controls.target.copy(target); camera.position.copy(target).addScaledVector(dir, d);
+      controls.maxDistance = Math.max(7, d * 2.5);
+      lastKey = ''; controls.update();
     }
     function onResize() {
-      W = innerWidth; H = innerHeight; renderer.setSize(W, H); camera.aspect = W / H; camera.updateProjectionMatrix(); lastPh = -1;
+      W = innerWidth; H = innerHeight; renderer.setSize(W, H); camera.aspect = W / H; camera.updateProjectionMatrix(); lastKey = '';
     }
     window.addEventListener('resize', onResize);
     function frame() {
-      const p = $('panel');
-      const ph = p.style.display !== 'none' && getComputedStyle(p).display !== 'none' && !p.classList.contains('collapsed') ? p.offsetHeight : 0;
-      if (ph !== lastPh) { lastPh = ph; if (ph > 0) camera.setViewOffset(W, H, 0, Math.min(ph * 0.5, H * 0.3), W, H); else camera.clearViewOffset(); }
+      const R = freeRect(), key = [R.l, R.t, R.r, R.b, W, H].map(Math.round).join(',');
+      if (key !== lastKey) {
+        const first = lastKey === ''; lastKey = key;
+        camera.setViewOffset(W, H, W / 2 - (R.l + R.r) / 2, H / 2 - (R.t + R.b) / 2, W, H);
+        if (!first && lastObj && !touched) { clearTimeout(refitT); refitT = setTimeout(() => { if (!touched) fit(lastObj); }, 250); }
+      }
       controls.update();
     }
     const hint = $('hint3d'); hint.style.display = 'block'; hint.style.opacity = 1;
