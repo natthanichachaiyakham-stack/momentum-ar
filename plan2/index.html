@@ -207,8 +207,9 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.round
     background: rgba(20,30,55,0.85); box-shadow: 0 2px 8px rgba(0,0,0,0.4); cursor: pointer; }
   @media (orientation: landscape) and (min-aspect-ratio: 5/4) { #zoom3d { right: calc(min(46vw, 440px) + 12px); bottom: 16px; } }
   #lblLayer { position: fixed; inset: 0; z-index: 12; pointer-events: none; overflow: hidden; }
-  #lblLayer .lbl { position: absolute; left: 0; top: 0; white-space: nowrap; font-weight: 700; line-height: 1.25;
-    padding: 0.12em 0.5em; border-radius: 0.6em; background: rgba(10,16,32,0.88); box-shadow: 0 1px 4px rgba(0,0,0,0.45);
+  #lblLayer .lbl { position: absolute; left: 0; top: 0; white-space: nowrap; max-width: calc(100vw - 12px); overflow: hidden; text-overflow: ellipsis; text-align: center; font-weight: 700; line-height: 1.25;
+    padding: 0.14em 0.55em; border-radius: 0.6em; background: rgba(6,10,22,0.94); border: 1.5px solid rgba(255,255,255,0.35);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.55); text-shadow: 0 1px 0 #000; -webkit-font-smoothing: antialiased; letter-spacing: 0.01em;
     font-family: Sarabun, sans-serif; will-change: transform; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
@@ -398,19 +399,47 @@ function updateLabels(camera, renderer) {
   if (!r.width) return;
   camera.updateMatrixWorld();
   _lu.setFromMatrixColumn(camera.matrixWorld, 1).normalize();
+  const vis = [], VW = innerWidth;
   for (const s of LBLS) {
     const el = s.userData.el;
-    if (!onStage(s)) { if (s.userData.shown) { el.style.display = 'none'; s.userData.shown = false; } continue; }
-    s.getWorldPosition(_lv); s.getWorldScale(_lw);
-    const top = _lv.clone().addScaledVector(_lu, Math.abs(_lw.y));
-    _lv.project(camera); top.project(camera);
-    if (_lv.z > 1 || _lv.z < -1) { if (s.userData.shown) { el.style.display = 'none'; s.userData.shown = false; } continue; }
-    const x = r.left + (_lv.x + 1) / 2 * r.width, y = r.top + (1 - _lv.y) / 2 * r.height;
-    const hpx = Math.abs(top.y - _lv.y) / 2 * r.height;
-    const fs = Math.max(12, Math.min(30, hpx * 0.62));
-    if (!s.userData.shown) { el.style.display = 'block'; s.userData.shown = true; }
-    el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -50%)`;
-    const f = fs.toFixed(1) + 'px'; if (el.style.fontSize !== f) el.style.fontSize = f;
+    let ok = onStage(s);
+    if (ok) {
+      s.getWorldPosition(_lv); s.getWorldScale(_lw);
+      const top = _lv.clone().addScaledVector(_lu, Math.abs(_lw.y));
+      _lv.project(camera); top.project(camera);
+      ok = _lv.z <= 1 && _lv.z >= -1;
+      if (ok) {
+        const hpx = Math.abs(top.y - _lv.y) / 2 * r.height;
+        const fs = Math.round(Math.max(14, Math.min(32, hpx * 0.7)));
+        if (s.userData.fs !== fs) { el.style.fontSize = fs + 'px'; s.userData.fs = fs; s.userData.mk = ''; }
+        vis.push({ s, el, x: r.left + (_lv.x + 1) / 2 * r.width, y: r.top + (1 - _lv.y) / 2 * r.height });
+      }
+    }
+    if (!ok && s.userData.shown) { el.style.display = 'none'; s.userData.shown = false; }
+  }
+  // วัดขนาดป้าย (วัดใหม่เฉพาะเมื่อข้อความหรือขนาดเปลี่ยน)
+  for (const v of vis) {
+    if (!v.s.userData.shown) { v.el.style.display = 'block'; v.s.userData.shown = true; }
+    const mk = v.el.textContent + '|' + v.s.userData.fs;
+    if (v.s.userData.mk !== mk) {
+      v.s.userData.mk = mk; let w = v.el.scrollWidth;
+      if (w > VW - 12) { const fs2 = Math.max(12, Math.floor(v.s.userData.fs * (VW - 16) / w)); v.el.style.fontSize = fs2 + 'px'; }
+      v.s.userData.w = v.el.offsetWidth; v.s.userData.h = v.el.offsetHeight;
+    }
+    v.w = v.s.userData.w; v.h = v.s.userData.h;
+    v.x = v.w >= VW - 8 ? VW / 2 : Math.max(v.w / 2 + 4, Math.min(VW - v.w / 2 - 4, v.x));   // ไม่ให้ล้นขอบจอ
+  }
+  // จัดไม่ให้ป้ายทับกัน: เลื่อนป้ายที่ชนขึ้นด้านบนทีละนิด
+  vis.sort((a, b) => b.y - a.y);
+  const placed = [];
+  for (const v of vis) {
+    for (let k = 0; k < 12; k++) {
+      const hit = placed.find((p) => Math.abs(p.x - v.x) < (p.w + v.w) / 2 + 2 && Math.abs(p.y - v.y) < (p.h + v.h) / 2 + 2);
+      if (!hit) break;
+      v.y = hit.y - (hit.h + v.h) / 2 - 3;
+    }
+    placed.push(v);
+    v.el.style.transform = `translate(${v.x.toFixed(1)}px, ${v.y.toFixed(1)}px) translate(-50%, -50%)`;
   }
 }
 
@@ -1548,9 +1577,9 @@ const KIT = (() => {
   // ---------- อ่านให้ฟัง (เสียงภาษาไทยของเครื่อง) ----------
   // แบบเสียงพูด: เจ้าหญิง (หวาน ใส สดใส) · การ์ตูน (สูง เร็ว ตื่นเต้น) · ปกติ
   const VOICES = {
-    princess: { lab: '👸 เจ้าหญิง', pitch: 1.75, rate: 1.0,
+    princess: { lab: '👸 เจ้าหญิง', pitch: 1.22, rate: 0.98,
       hi: ['สวัสดีจ้าเพื่อน ๆ! มาผจญภัยในโลกฟิสิกส์ด้วยกันนะ', 'ว้าว! ตื่นเต้นจังเลย มาฟังกันนะคะ', 'เย้! วันนี้เราจะได้ค้นพบเรื่องใหม่ด้วยกันจ้า', 'มาเถอะจ้า ไปดูความลับของโมเมนตัมกัน!'] },
-    cartoon: { lab: '🧸 การ์ตูน', pitch: 1.55, rate: 1.05, hi: ['ว้าว! มาฟังกันเลย!', 'เย้! มาเรียนรู้กันนะ!', 'ตื่นเต้นจัง! ฟังให้ดีนะ!', 'มาดูกันเลย!'] },
+    cartoon: { lab: '🧸 การ์ตูน', pitch: 1.38, rate: 1.04, hi: ['ว้าว! มาฟังกันเลย!', 'เย้! มาเรียนรู้กันนะ!', 'ตื่นเต้นจัง! ฟังให้ดีนะ!', 'มาดูกันเลย!'] },
     normal: { lab: '🙂 ปกติ', pitch: 1, rate: 0.95, hi: null },
   };
   const ORDER = ['princess', 'cartoon', 'normal'];
